@@ -3,8 +3,10 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import argparse
+from tqdm import tqdm
 import utils
 from models.vqvae import VQVAE
+
 
 parser = argparse.ArgumentParser()
 
@@ -23,16 +25,18 @@ parser.add_argument("--n_embeddings", type=int, default=512)
 parser.add_argument("--beta", type=float, default=.25)
 parser.add_argument("--learning_rate", type=float, default=3e-4)
 parser.add_argument("--log_interval", type=int, default=50)
-parser.add_argument("--dataset",  type=str, default='CIFAR10')
+parser.add_argument("--dataset",  type=str, default='CELEBA')
 
 # whether or not to save model
-parser.add_argument("-save", action="store_true")
+parser.add_argument("--save", action="store_true")
 parser.add_argument("--filename",  type=str, default=timestamp)
 
 args = parser.parse_args()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+# add in the dataset to the filename
+args.filename += args.dataset
 if args.save:
     print('Results will be saved in ./results/vqvae_' + args.filename + '.pth')
 
@@ -66,7 +70,7 @@ results = {
 
 def train():
 
-    for i in range(args.n_updates):
+    for i in tqdm(range(args.n_updates), desc="training epochs"):
         (x, _) = next(iter(training_loader))
         x = x.to(device)
         optimizer.zero_grad()
