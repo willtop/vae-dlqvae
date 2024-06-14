@@ -11,7 +11,7 @@ import numpy as np
 def load_celeba():
     data_transforms = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Resize((84,84))
+        transforms.Resize((224,224))
     ])
     train = datasets.CelebA("data", 
                             split='train', 
