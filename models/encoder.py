@@ -35,6 +35,9 @@ class Encoder(nn.Module):
             nn.Conv2d(h_dim, h_dim, kernel_size=kernel,
                       stride=stride, padding=1),
             nn.ReLU(),
+            nn.Conv2d(h_dim, h_dim, kernel_size=kernel,
+                      stride=stride, padding=1),
+            nn.ReLU(),
             nn.Conv2d(h_dim, h_dim, kernel_size=kernel-1,
                       stride=stride-1, padding=1),
             ResidualStack(
@@ -48,7 +51,7 @@ class Encoder(nn.Module):
 
 if __name__ == "__main__":
     # random data
-    x = np.random.random_sample((3, 40, 40, 200))
+    x = np.random.random_sample((10, 3, 224, 224))
     x = torch.tensor(x).float()
 
     # test encoder

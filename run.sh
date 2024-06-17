@@ -1,1 +1,1 @@
-python main.py --n_embeddings 64 --dataset CELEBA --save
+python main.py --embedding_dim 75 --n_embeddings 100 --dataset CELEBA --save
