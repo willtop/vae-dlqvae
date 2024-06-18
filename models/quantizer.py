@@ -269,7 +269,7 @@ class LatentQuantizer(Module):
         # originally had the following line to return a single index into the grid
         # return (zhat * self._basis).sum(dim=-1).to(int32)
         # however we want disentangled indices, so directly return zhat would be good
-        return zhat
+        return zhat.to(torch.int32)
 
     def indices_to_codes(self, indices: Tensor, project_out=True) -> Tensor:
         """Inverse of `codes_to_indices`."""
@@ -338,6 +338,7 @@ class LatentQuantizer(Module):
         out = rearrange(out, "b ... d -> b d ...")
 
         # previously had the indices unpacked into square format for latent pixels
+        # also not sure why this line of code would lead to error in diversified-metaML codebase
         # indices = unpack_one(indices, ps, "b * c")
 
         # previously after getting index of the whole grid, the last dimension is 1
