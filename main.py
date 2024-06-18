@@ -6,6 +6,7 @@ import argparse
 from tqdm import tqdm
 import utils
 from models.vqvae import VQVAE
+from models.dlqvae import DLQVAE
 
 
 parser = argparse.ArgumentParser()
@@ -15,30 +16,25 @@ Hyperparameters
 """
 timestamp = utils.readable_timestamp()
 
+parser.add_argument("--model", type=str, default="VQVAE")
 parser.add_argument("--batch_size", type=int, default=32)
 parser.add_argument("--n_updates", type=int, default=20000)
 parser.add_argument("--n_hiddens", type=int, default=128)
 parser.add_argument("--n_residual_hiddens", type=int, default=32)
 parser.add_argument("--n_residual_layers", type=int, default=2)
-parser.add_argument("--embedding_dim", type=int, default=64)
-parser.add_argument("--n_embeddings", type=int, default=512)
 parser.add_argument("--beta", type=float, default=.25)
 parser.add_argument("--learning_rate", type=float, default=3e-4)
-parser.add_argument("--log_interval", type=int, default=50)
+parser.add_argument("--log_interval", type=int, default=200)
 parser.add_argument("--dataset",  type=str, default='CELEBA')
 
-# whether or not to save model
-parser.add_argument("--save", action="store_true")
-parser.add_argument("--filename",  type=str, default=timestamp)
 
 args = parser.parse_args()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # add in the dataset to the filename
-args.filename += args.dataset
-if args.save:
-    print('Results will be saved in ./results/vqvae_' + args.filename + '.pth')
+model_filename = f"{args.model}-{args.dataset}-{timestamp}" 
+print('Results will be saved in ./results/' + model_filename + '.pth')
 
 """
 Load data and define batch data loaders
@@ -50,8 +46,19 @@ training_data, validation_data, training_loader, validation_loader, x_train_var 
 Set up VQ-VAE model with components defined in ./models/ folder
 """
 
-model = VQVAE(args.n_hiddens, args.n_residual_hiddens,
-              args.n_residual_layers, args.n_embeddings, args.embedding_dim, args.beta).to(device)
+if args.model == "VQVAE":
+    # number of quantized vector per latent pixel
+    n_embeddings = 64
+    # depth of each latent pixel
+    embedding_dim = 64
+    model = VQVAE(args.n_hiddens, args.n_residual_hiddens, args.n_residual_layers, 
+                  n_embeddings, embedding_dim, args.beta).to(device)
+else:
+    n_embeddings_per_dim = 10
+    # depth of each latent pixel
+    embedding_dim = 5
+    model = DLQVAE(args.n_hiddens, args.n_residual_hiddens, args.n_residual_layers,
+                   n_embeddings_per_dim, embedding_dim).to(device)
 
 """
 Set up optimizer and training loop
@@ -91,10 +98,9 @@ def train():
             """
             save model and print values
             """
-            if args.save:
-                hyperparameters = args.__dict__
-                utils.save_model_and_results(
-                    model, results, hyperparameters, args.filename)
+            hyperparameters = args.__dict__
+            utils.save_model_and_results(
+                model, results, hyperparameters, model_filename)
 
             print('Update #', i, 'Recon Error:',
                   np.mean(results["recon_errors"][-args.log_interval:]),

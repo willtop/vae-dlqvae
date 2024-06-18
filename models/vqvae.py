@@ -2,9 +2,9 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from models.encoder import Encoder
+from models.encoder import Encoder_VQVAE
 from models.quantizer import VectorQuantizer
-from models.decoder import Decoder
+from models.decoder import Decoder_VQVAE
 
 
 class VQVAE(nn.Module):
@@ -12,14 +12,14 @@ class VQVAE(nn.Module):
                  n_embeddings, embedding_dim, beta, save_img_embedding_map=False):
         super(VQVAE, self).__init__()
         # encode image into continuous latent space
-        self.encoder = Encoder(3, h_dim, n_res_layers, res_h_dim)
+        self.encoder = Encoder_VQVAE(3, h_dim, n_res_layers, res_h_dim)
         self.pre_quantization_conv = nn.Conv2d(
             h_dim, embedding_dim, kernel_size=1, stride=1)
         # pass continuous latent vector through discretization bottleneck
         self.vector_quantization = VectorQuantizer(
             n_embeddings, embedding_dim, beta)
         # decode the discrete latent representation
-        self.decoder = Decoder(embedding_dim, h_dim, n_res_layers, res_h_dim)
+        self.decoder = Decoder_VQVAE(embedding_dim, h_dim, n_res_layers, res_h_dim)
 
         if save_img_embedding_map:
             self.img_to_embedding_map = {i: [] for i in range(n_embeddings)}

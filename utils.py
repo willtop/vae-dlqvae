@@ -138,4 +138,4 @@ def save_model_and_results(model, results, hyperparameters, filename):
         'hyperparameters': hyperparameters
     }
     torch.save(results_to_save,
-               os.path.join(SAVE_MODEL_PATH, 'vqvae_' + filename + '.pth'))
+               os.path.join(SAVE_MODEL_PATH, filename + '.pth'))

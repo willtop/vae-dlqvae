@@ -6,7 +6,7 @@ import numpy as np
 from models.residual import ResidualStack
 
 
-class Decoder(nn.Module):
+class Decoder_VQVAE(nn.Module):
     """
     This is the p_phi (x|z) network. Given a latent sample z p_phi 
     maps back to the original space z -> x.
@@ -20,7 +20,7 @@ class Decoder(nn.Module):
     """
 
     def __init__(self, in_dim, h_dim, n_res_layers, res_h_dim):
-        super(Decoder, self).__init__()
+        super(Decoder_VQVAE, self).__init__()
         kernel = 4
         stride = 2
 
@@ -28,6 +28,47 @@ class Decoder(nn.Module):
             nn.ConvTranspose2d(
                 in_dim, h_dim, kernel_size=kernel-1, stride=stride-1, padding=1),
             ResidualStack(h_dim, h_dim, res_h_dim, n_res_layers),
+            nn.ConvTranspose2d(h_dim, h_dim,
+                               kernel_size=kernel, stride=stride, padding=1),
+            nn.ReLU(),
+            nn.ConvTranspose2d(h_dim, h_dim,
+                               kernel_size=kernel, stride=stride, padding=1),
+            nn.ReLU(),
+            nn.ConvTranspose2d(h_dim, h_dim,
+                               kernel_size=kernel, stride=stride, padding=1),
+            nn.ReLU(),
+            nn.ConvTranspose2d(h_dim, 3, kernel_size=kernel,
+                               stride=stride, padding=1)
+        )
+
+    def forward(self, x):
+        return self.inverse_conv_stack(x)
+    
+class Decoder_DLQVAE(nn.Module):
+    """
+    This is the p_phi (x|z) network. Given a latent sample z p_phi 
+    maps back to the original space z -> x.
+
+    Inputs:
+    - in_dim : the input dimension
+    - h_dim : the hidden layer dimension
+    - res_h_dim : the hidden dimension of the residual block
+    - n_res_layers : number of layers to stack
+
+    """
+
+    def __init__(self, in_dim, h_dim, n_res_layers, res_h_dim):
+        super(Decoder_DLQVAE, self).__init__()
+        kernel = 4
+        stride = 2
+
+        self.inverse_conv_stack = nn.Sequential(
+            nn.ConvTranspose2d(
+                in_dim, h_dim, kernel_size=kernel-1, stride=stride-1, padding=1),
+            ResidualStack(h_dim, h_dim, res_h_dim, n_res_layers),
+            nn.ConvTranspose2d(h_dim, h_dim,
+                               kernel_size=kernel, stride=stride, padding=1),
+            nn.ReLU(),
             nn.ConvTranspose2d(h_dim, h_dim,
                                kernel_size=kernel, stride=stride, padding=1),
             nn.ReLU(),
@@ -51,6 +92,6 @@ if __name__ == "__main__":
     x = torch.tensor(x).float()
 
     # test decoder
-    decoder = Decoder(40, 128, 3, 64)
+    decoder = Decoder_VQVAE(40, 128, 3, 64)
     decoder_out = decoder(x)
     print('Dncoder out shape:', decoder_out.shape)
