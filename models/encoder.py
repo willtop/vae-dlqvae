@@ -1,105 +1,28 @@
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from models.residual import ResidualStack
 
 
-class Encoder_VQVAE(nn.Module):
-    """
-    This is the q_theta (z|x) network. Given a data sample x q_theta 
-    maps to the latent space x -> z.
-
-    For a VQ VAE, q_theta outputs parameters of a categorical distribution.
-
-    Inputs:
-    - in_dim : the input dimension
-    - h_dim : the hidden layer dimension
-    - res_h_dim : the hidden dimension of the residual block
-    - n_res_layers : number of layers to stack
-
-    """
-
-    def __init__(self, in_dim, h_dim, n_res_layers, res_h_dim):
-        super(Encoder_VQVAE, self).__init__()
-        kernel = 4
-        stride = 2
-        self.conv_stack = nn.Sequential(
-            nn.Conv2d(in_dim, h_dim, kernel_size=kernel,
-                      stride=stride, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(h_dim, h_dim, kernel_size=kernel,
-                      stride=stride, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(h_dim, h_dim, kernel_size=kernel,
-                      stride=stride, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(h_dim, h_dim, kernel_size=kernel,
-                      stride=stride, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(h_dim, h_dim, kernel_size=kernel-1,
-                      stride=stride-1, padding=1),
-            ResidualStack(
-                h_dim, h_dim, res_h_dim, n_res_layers)
-
-        )
-
-    def forward(self, x):
-        return self.conv_stack(x)
+def construct_vae_encoder(latent_dim):
+    in_dim = 3
+    hidden_dims = [32, 64, 128, 256, 512]
     
-class Encoder_DLQVAE(nn.Module):
-    """
-    This is the q_theta (z|x) network. Given a data sample x q_theta 
-    maps to the latent space x -> z.
-
-    For a VQ VAE, q_theta outputs parameters of a categorical distribution.
-
-    Inputs:
-    - in_dim : the input dimension
-    - h_dim : the hidden layer dimension
-    - res_h_dim : the hidden dimension of the residual block
-    - n_res_layers : number of layers to stack
-
-    """
-
-    def __init__(self, in_dim, h_dim, n_res_layers, res_h_dim):
-        super(Encoder_DLQVAE, self).__init__()
-        kernel = 4
-        stride = 2
-        self.conv_stack = nn.Sequential(
-            nn.Conv2d(in_dim, h_dim, kernel_size=kernel,
-                      stride=stride, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(h_dim, h_dim, kernel_size=kernel,
-                      stride=stride, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(h_dim, h_dim, kernel_size=kernel,
-                      stride=stride, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(h_dim, h_dim, kernel_size=kernel,
-                      stride=stride, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(h_dim, h_dim, kernel_size=kernel,
-                      stride=stride, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(h_dim, h_dim, kernel_size=kernel-1,
-                      stride=stride-1, padding=1),
-            ResidualStack(
-                h_dim, h_dim, res_h_dim, n_res_layers)
-
+    encoder_conv_list = []
+    for h_dim in hidden_dims:
+        encoder_conv_list.append(
+            nn.Sequential(
+                nn.Conv2d(in_channels=in_dim, out_channels=h_dim,
+                            kernel_size=3, stride=2, padding=1),
+                nn.BatchNorm2d(h_dim),
+                nn.LeakyReLU())
         )
-
-    def forward(self, x):
-        return self.conv_stack(x)
-
-
-if __name__ == "__main__":
-    # random data
-    x = np.random.random_sample((10, 3, 224, 224))
-    x = torch.tensor(x).float()
-
-    # test encoder
-    encoder = Encoder_VQVAE(40, 128, 3, 64)
-    encoder_out = encoder(x)
-    print('Encoder out shape:', encoder_out.shape)
+        in_dim = h_dim
+    encoder_conv_lyrs = nn.Sequential(*encoder_conv_list)
+    # throw in a pseudo image to see the convolution layers output size
+    dummy_out = encoder_conv_lyrs(torch.rand(1, 3, 227, 227))
+    conv_out_size = dummy_out.shape[2]
+    # add in flattened fully connected layers
+    encoder_fc_mu = nn.Linear(hidden_dims[-1] * conv_out_size**2, latent_dim)
+    encoder_fc_var = nn.Linear(hidden_dims[-1] * conv_out_size**2, latent_dim)
+    return encoder_conv_lyrs, encoder_fc_mu, encoder_fc_var, hidden_dims[-1], conv_out_size

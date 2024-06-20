@@ -123,19 +123,14 @@ def load_data_and_data_loaders(dataset, batch_size):
     return training_data, validation_data, training_loader, validation_loader, x_train_var
 
 
-def readable_timestamp():
-    return time.ctime().replace('  ', ' ').replace(
-        ' ', '_').replace(':', '_').lower()
 
-
-def save_model_and_results(model, results, hyperparameters, filename):
-    SAVE_MODEL_PATH = os.path.join(os.getcwd(), 'results')
-    os.makedirs(SAVE_MODEL_PATH, exist_ok=True)
+def save_model_and_parameters(model, hyperparameters, filename, args):
+    os.makedirs(filename, exist_ok=True)
 
     results_to_save = {
         'model': model.state_dict(),
-        'results': results,
         'hyperparameters': hyperparameters
     }
-    torch.save(results_to_save,
-               os.path.join(SAVE_MODEL_PATH, filename + '.pth'))
+    torch.save(results_to_save, filename)
+    print(f"{args.model} model saved successfully at: ", filename)
+    return
