@@ -40,36 +40,48 @@ class VanillaVAE(nn.Module):
     def decode(self, z):
         z = self.decoder_fc(z)
         z = z.view(-1, self.last_hidden_channels, self.encoder_conv_out_size, self.encoder_conv_out_size)
-        x = self.decoder_conv_lyrs(z)
-        return x
+        x_hat = self.decoder_conv_lyrs(z)
+        return x_hat
 
 
 class DLQVAE(nn.Module):
-    def __init__(self, h_dim, res_h_dim, n_res_layers,
-                 n_embeddings_per_dim, embedding_dim):
+    def __init__(self, latent_dim_encoder, latent_dim_quant, levels_per_dim):
         super(DLQVAE, self).__init__()
-        # encode image into continuous latent space
-        self.encoder = Encoder_DLQVAE(3, h_dim, n_res_layers, res_h_dim)
-        self.pre_quantization_conv = nn.Conv2d(
-            h_dim, embedding_dim, kernel_size=1, stride=1)
+        self.latent_dim_encoder = latent_dim_encoder
+        self.latent_dim_quant = latent_dim_quant
+        self.levels_per_dim = levels_per_dim
+        # construct encoder module
+        (
+            self.encoder_conv_lyrs, 
+            self.encoder_fc_mu,
+            _, # don't need the variation prediction layer
+            self.last_hidden_channels, 
+            self.encoder_conv_out_size
+        ) = construct_vae_encoder(self.latent_dim_encoder)
+        self.fc_encoder_to_quant = nn.Linear(self.latent_dim_encoder, self.latent_dim_quant)
         # pass continuous latent vector through discretization bottleneck
         self.vector_quantization = LatentQuantizer(
-                levels = n_embeddings_per_dim,
-                # avoid the need for internal linear projection layer
-                dim = embedding_dim,
-                codebook_dim = embedding_dim
+                latent_dim = self.latent_dim_quant,                
+                levels_per_dim = self.levels_per_dim
             )
-        # decode the discrete latent representation
-        self.decoder = Decoder_DLQVAE(embedding_dim, h_dim, n_res_layers, res_h_dim)
+        # construct decoder module
+        (
+            self.decoder_fc,
+            self.decoder_conv_lyrs 
+        ) = construct_vae_decoder(self.latent_dim, 
+                                  encoder_conv_out_size=self.encoder_conv_out_size)
+        
 
 
     def forward(self, x):
-
-        z_e = self.encoder(x)
-
-        z_e = self.pre_quantization_conv(z_e)
-        z_q, _, embedding_loss = self.vector_quantization(z_e)
+        z = self.encoder(x)
+        z = self.fc_encoder_to_quant(z)
+        (
+            z_q, 
+            quant_idxs, 
+            latent_loss_quant, 
+            latent_loss_commit
+        ) = self.vector_quantization(z)
         x_hat = self.decoder(z_q)
 
-        # return a placeholder for perplexity
-        return embedding_loss, x_hat, torch.tensor(-1)
+        return x_hat, quant_idxs, latent_loss_quant, latent_loss_commit

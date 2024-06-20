@@ -19,8 +19,9 @@ def construct_vae_encoder(latent_dim):
         )
         in_dim = h_dim
     encoder_conv_lyrs = nn.Sequential(*encoder_conv_list)
-    # throw in a pseudo image to see the convolution layers output size
-    dummy_out = encoder_conv_lyrs(torch.rand(1, 3, 227, 227))
+    # throw in a pseudo 224X224 image (same as preprocessed celebA) 
+    # to see the convolution layers output size
+    dummy_out = encoder_conv_lyrs(torch.rand(1, 3, 224, 224))
     conv_out_size = dummy_out.shape[2]
     # add in flattened fully connected layers
     encoder_fc_mu = nn.Linear(hidden_dims[-1] * conv_out_size**2, latent_dim)
