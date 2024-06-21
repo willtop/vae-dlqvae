@@ -64,17 +64,20 @@ class DLQVAE(nn.Module):
                 latent_dim = self.latent_dim_quant,                
                 levels_per_dim = self.levels_per_dim
             )
+        self.fc_quant_to_decoder = nn.Linear(self.latent_dim_quant, self.latent_dim_encoder)
         # construct decoder module
         (
             self.decoder_fc,
             self.decoder_conv_lyrs 
-        ) = construct_vae_decoder(self.latent_dim, 
+        ) = construct_vae_decoder(self.latent_dim_encoder, 
                                   encoder_conv_out_size=self.encoder_conv_out_size)
         
 
 
     def forward(self, x):
-        z = self.encoder(x)
+        z = self.encoder_conv_lyrs(x)
+        z = torch.flatten(z, start_dim=1)
+        z = self.encoder_fc_mu(z)
         z = self.fc_encoder_to_quant(z)
         (
             z_q, 
@@ -82,6 +85,8 @@ class DLQVAE(nn.Module):
             latent_loss_quant, 
             latent_loss_commit
         ) = self.vector_quantization(z)
-        x_hat = self.decoder(z_q)
+        z_q = self.fc_quant_to_decoder(z_q)
+        z_q = self.decoder_fc(z_q)
+        x_hat = self.decoder_conv_lyrs(z_q)
 
         return x_hat, quant_idxs, latent_loss_quant, latent_loss_commit

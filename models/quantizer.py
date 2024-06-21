@@ -106,7 +106,7 @@ class LatentQuantizer(Module):
         values_per_latent = [
             torch.linspace(-0.5, 0.5, self.levels_per_dim) if self.levels_per_dim % 2 == 1 \
                                 else torch.arange(self.levels_per_dim) / self.levels_per_dim - 0.5
-            for _ in self.latent_dim
+            for _ in range(self.latent_dim)
         ]
     
 
@@ -136,15 +136,15 @@ class LatentQuantizer(Module):
 
         quant_idxs = torch.stack(
             [
-                torch.argmin(distance(z[..., i], self.values_per_latent[i]))
+                torch.argmin(distance(z[:, i].view(-1,1), self.values_per_latent[i]), dim=1)
                     for i in range(self.latent_dim)
             ],
             dim=-1,
         )
         z_quant = torch.stack(
             [
-                self.values_per_latent[i][quant_idxs[..., i]]
-                for i in range(self.codebook_dim)
+                self.values_per_latent[i][quant_idxs[:, i]]
+                for i in range(self.latent_dim)
             ],
             dim=-1,
         )

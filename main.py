@@ -62,7 +62,7 @@ else:
     n_embeddings_per_dim = 10
     # depth of each latent pixel
     embedding_dim = 5
-    model = DLQVAE(latent_dim_encoder=args.latent,
+    model = DLQVAE(latent_dim_encoder=args.latent_dim,
                    latent_dim_quant=10,
                    levels_per_dim=2
                    ).to(device)
@@ -129,7 +129,7 @@ def test():
                 mu, log_var = model.encode(x)
                 z_sampled = model.reparameterize(mu, log_var)
                 x_hat =  model.decode(z_sampled)
-                assert torch.equal(x.shape, x_hat.shape)
+                assert list(x.shape)==list(x_hat.shape)
                 # compute losses
                 loss_reconstruct = F.mse_loss(input=x_hat, target=x)
                 loss_KL = -0.5 * torch.mean(1 + log_var - mu.pow(2) - log_var.exp())
