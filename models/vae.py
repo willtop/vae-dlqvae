@@ -116,5 +116,7 @@ class DLQVAE(nn.Module):
         return x_sampled
 
     def inspect_learned_codebook(self):
-        print(self.vector_quantizer.values_per_latent)
+        for i in range(self.latent_dim_quant):
+            vals = self.vector_quantizer.values_per_latent[i].data
+            print(vals)
         return
