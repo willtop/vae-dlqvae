@@ -108,9 +108,7 @@ class LatentQuantizer(Module):
                                 else torch.arange(self.levels_per_dim) / self.levels_per_dim - 0.5
             for _ in range(self.latent_dim)
         ]
-    
 
-        # TODO: NEED DOUBLE CHECKING
         # Add the values per latent into the model parameters for optimization
         self.values_per_latent = nn.ParameterList(
             [nn.Parameter(values) for values in values_per_latent]

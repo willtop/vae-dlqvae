@@ -154,12 +154,16 @@ def test():
 
     test_loss /= len(validation_loader)
     print(f'{args.model} Test set loss: {test_loss:.4f}')
+
+    if args.model == "DLQVAE":
+        print("Inspecting trained DLQVAE codebook...")
+        model.inspect_learned_codebook()
+
     return
 
 def generate():
     with torch.no_grad():
-        z_sampled = torch.randn(64, args.latent_dim).to(device)
-        x_sampled = model.decode(z_sampled).cpu()
+        x_sampled = model.sample(64, device).cpu()
         save_image(x_sampled, f"results/gen-samples-{args.model}.png", nrow=8)
     return
 

@@ -42,7 +42,12 @@ class VanillaVAE(nn.Module):
         z = z.view(-1, self.conv_channels[-1], self.encoder_conv_out_size, self.encoder_conv_out_size)
         x_hat = self.decoder_conv_lyrs(z)
         return x_hat
-
+    
+    def sample(self, n_samples, device):
+        self.eval()
+        z_sampled = torch.randn(n_samples, self.latent_dim).to(device)
+        x_sampled = self.decode(z_sampled)
+        return x_sampled
 
 class DLQVAE(nn.Module):
     def __init__(self, latent_dim_encoder, latent_dim_quant, levels_per_dim):
@@ -61,7 +66,7 @@ class DLQVAE(nn.Module):
         ) = construct_vae_encoder(self.conv_channels, self.latent_dim_encoder)
         self.fc_encoder_to_quant = nn.Linear(self.latent_dim_encoder, self.latent_dim_quant)
         # pass continuous latent vector through discretization bottleneck
-        self.vector_quantization = LatentQuantizer(
+        self.vector_quantizer = LatentQuantizer(
                 latent_dim = self.latent_dim_quant,                
                 levels_per_dim = self.levels_per_dim
             )
@@ -73,22 +78,43 @@ class DLQVAE(nn.Module):
         ) = construct_vae_decoder(self.conv_channels, self.latent_dim_encoder, 
                                   encoder_conv_out_size=self.encoder_conv_out_size)
         
-
-
-    def forward(self, x):
+    def encode(self, x):
         z = self.encoder_conv_lyrs(x)
         z = torch.flatten(z, start_dim=1)
         z = self.encoder_fc_mu(z)
         z = self.fc_encoder_to_quant(z)
+        return z
+        
+    def decode(self, z):
+        z = self.fc_quant_to_decoder(z)
+        z = self.decoder_fc(z)
+        z = z.view(-1, self.conv_channels[-1], self.encoder_conv_out_size, self.encoder_conv_out_size)
+        x_hat = self.decoder_conv_lyrs(z)
+        return x_hat
+
+    def forward(self, x):
+        z = self.encode(x)        
         (
             z_q, 
             quant_idxs, 
             latent_loss_quant, 
             latent_loss_commit
-        ) = self.vector_quantization(z)
-        z_q = self.fc_quant_to_decoder(z_q)
-        z_q = self.decoder_fc(z_q)
-        z_q = z_q.view(-1, self.conv_channels[-1], self.encoder_conv_out_size, self.encoder_conv_out_size)
-        x_hat = self.decoder_conv_lyrs(z_q)
+        ) = self.vector_quantizer(z)
+        x_hat = self.decode(z_q)
 
         return x_hat, quant_idxs, latent_loss_quant, latent_loss_commit
+
+    def sample(self, n_samples, device):
+        self.eval()
+        z_sampled = torch.stack([
+            self.vector_quantizer.values_per_latent[i][
+                torch.randint(high=self.levels_per_dim, size=(n_samples,))]
+                    for i in range(self.latent_dim_quant)
+        ],dim=-1).to(device)
+        assert z_sampled.shape == (n_samples, self.latent_dim_quant)
+        x_sampled = self.decode(z_sampled)
+        return x_sampled
+
+    def inspect_learned_codebook(self):
+        print(self.vector_quantizer.values_per_latent)
+        return
