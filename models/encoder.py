@@ -4,10 +4,8 @@ import torch.nn.functional as F
 import numpy as np
 
 
-def construct_vae_encoder(latent_dim):
-    in_dim = 3
-    hidden_dims = [32, 64, 128, 256, 512]
-    
+def construct_vae_encoder(hidden_dims, latent_dim):
+    in_dim = 3 
     encoder_conv_list = []
     for h_dim in hidden_dims:
         encoder_conv_list.append(
@@ -26,4 +24,4 @@ def construct_vae_encoder(latent_dim):
     # add in flattened fully connected layers
     encoder_fc_mu = nn.Linear(hidden_dims[-1] * conv_out_size**2, latent_dim)
     encoder_fc_var = nn.Linear(hidden_dims[-1] * conv_out_size**2, latent_dim)
-    return encoder_conv_lyrs, encoder_fc_mu, encoder_fc_var, hidden_dims[-1], conv_out_size
+    return encoder_conv_lyrs, encoder_fc_mu, encoder_fc_var, conv_out_size

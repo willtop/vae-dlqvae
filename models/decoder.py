@@ -3,12 +3,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-def construct_vae_decoder(latent_dim, encoder_conv_out_size):
-    # the same list as the encoder
-    hidden_dims = [32, 64, 128, 256, 512]
-    
+def construct_vae_decoder(hidden_dims, latent_dim, encoder_conv_out_size):
     decoder_conv_list = []
     decoder_fc = nn.Linear(latent_dim, hidden_dims[-1] * encoder_conv_out_size**2)
+    # reverse the convolutional layer channels, don't alter the outside list
+    hidden_dims = hidden_dims.copy()
     hidden_dims.reverse()
     for i in range(len(hidden_dims) - 1):
         decoder_conv_list.append(
