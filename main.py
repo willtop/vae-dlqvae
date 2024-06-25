@@ -59,12 +59,9 @@ Set up VQ-VAE model with components defined in ./models/ folder
 if args.model == "VanillaVAE":
     model = VanillaVAE(args.latent_dim).to(device)
 else:
-    n_embeddings_per_dim = 10
-    # depth of each latent pixel
-    embedding_dim = 5
     model = DLQVAE(latent_dim_encoder=args.latent_dim,
-                   latent_dim_quant=30,
-                   levels_per_dim=3
+                   latent_dim_quant=256,
+                   levels_per_dim=4
                    ).to(device)
 
 """

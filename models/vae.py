@@ -64,13 +64,15 @@ class DLQVAE(nn.Module):
             _, # don't need the variation prediction layer
             self.encoder_conv_out_size
         ) = construct_vae_encoder(self.conv_channels, self.latent_dim_encoder)
-        self.fc_encoder_to_quant = nn.Linear(self.latent_dim_encoder, self.latent_dim_quant)
+        if self.latent_dim_quant != self.latent_dim_encoder:
+            self.fc_encoder_to_quant = nn.Linear(self.latent_dim_encoder, self.latent_dim_quant)
         # pass continuous latent vector through discretization bottleneck
         self.vector_quantizer = LatentQuantizer(
                 latent_dim = self.latent_dim_quant,                
                 levels_per_dim = self.levels_per_dim
             )
-        self.fc_quant_to_decoder = nn.Linear(self.latent_dim_quant, self.latent_dim_encoder)
+        if self.latent_dim_quant != self.latent_dim_encoder:
+            self.fc_quant_to_decoder = nn.Linear(self.latent_dim_quant, self.latent_dim_encoder)
         # construct decoder module
         (
             self.decoder_fc,
@@ -82,11 +84,13 @@ class DLQVAE(nn.Module):
         z = self.encoder_conv_lyrs(x)
         z = torch.flatten(z, start_dim=1)
         z = self.encoder_fc_mu(z)
-        z = self.fc_encoder_to_quant(z)
+        if self.latent_dim_quant != self.latent_dim_encoder:
+            z = self.fc_encoder_to_quant(z)
         return z
         
     def decode(self, z):
-        z = self.fc_quant_to_decoder(z)
+        if self.latent_dim_quant != self.latent_dim_encoder:
+            z = self.fc_quant_to_decoder(z)
         z = self.decoder_fc(z)
         z = z.view(-1, self.conv_channels[-1], self.encoder_conv_out_size, self.encoder_conv_out_size)
         x_hat = self.decoder_conv_lyrs(z)
