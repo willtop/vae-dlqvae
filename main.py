@@ -18,10 +18,10 @@ Hyperparameters
 """
 
 parser.add_argument("--model", type=str, default="VanillaVAE")
-parser.add_argument("--batch_size", type=int, default=64)
+parser.add_argument("--batch_size", type=int, default=128)
 parser.add_argument("--latent_dim", type=int, default=256)
 parser.add_argument("--n_epochs", type=int, default=20)
-parser.add_argument("--learning_rate", type=float, default=1e-4)
+parser.add_argument("--learning_rate", type=float, default=5e-4)
 parser.add_argument("--log_interval", type=int, default=5)
 parser.add_argument("--dataset",  type=str, default='CELEBA')
 parser.add_argument("--test", action="store_true")
@@ -61,7 +61,7 @@ if args.model == "VanillaVAE":
 else:
     model = DLQVAE(latent_dim_encoder=args.latent_dim,
                    latent_dim_quant=256,
-                   levels_per_dim=4
+                   levels_per_dim=10
                    ).to(device)
 
 """

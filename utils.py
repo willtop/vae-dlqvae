@@ -66,10 +66,12 @@ def load_data_and_data_loaders(dataset, batch_size):
         training_data, validation_data = load_celeba()
         training_loader, validation_loader = data_loaders(
             training_data, validation_data, batch_size)
+        # original codebase computes var, for time saving, just take a sample for estimator
+        n_samples_for_var = 10000
         # CelebA doesn't have readily obtainable attribute for getting images
-        training_imgs = torch.stack([training_data[i][0] for i in range(len(training_data))],axis=0)
-        x_train_var = np.var(training_imgs.numpy())
-
+        training_imgs_sample = torch.stack([training_data[i][0] for i in range(n_samples_for_var)],axis=0)
+        x_train_var = np.var(training_imgs_sample.numpy())
+        print("Estimated CELEBA image pixel variance: ", x_train_var)
     else:
         raise ValueError(
             'Invalid dataset: only CIFAR10 and CELEBA datasets are supported.')

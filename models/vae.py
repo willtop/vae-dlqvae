@@ -18,6 +18,7 @@ class VanillaVAE(nn.Module):
             self.encoder_fc_var, 
             self.encoder_conv_out_size
         ) = construct_vae_encoder(self.conv_channels, self.latent_dim)
+        print(f"Constructed VanillaVAE, with output size after encoder convolution layers: {self.conv_channels[-1]}X{self.encoder_conv_out_size}X{self.encoder_conv_out_size}")
         # construct decoder module
         (
             self.decoder_fc,
@@ -64,6 +65,7 @@ class DLQVAE(nn.Module):
             _, # don't need the variation prediction layer
             self.encoder_conv_out_size
         ) = construct_vae_encoder(self.conv_channels, self.latent_dim_encoder)
+        print(f"Constructed DLQVAE, with output size after encoder convolution layers: {self.conv_channels[-1]}X{self.encoder_conv_out_size}X{self.encoder_conv_out_size}")
         if self.latent_dim_quant != self.latent_dim_encoder:
             self.fc_encoder_to_quant = nn.Linear(self.latent_dim_encoder, self.latent_dim_quant)
         # pass continuous latent vector through discretization bottleneck
