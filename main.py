@@ -49,8 +49,7 @@ Load data and define batch data loaders
     training_data, 
     validation_data, 
     training_loader, 
-    validation_loader, 
-    x_train_var
+    validation_loader
 ) = utils.load_data_and_data_loaders(args.dataset, args.batch_size)
 """
 Set up VQ-VAE model with components defined in ./models/ folder
@@ -61,7 +60,7 @@ if args.model == "VanillaVAE":
 else:
     model = DLQVAE(latent_dim_encoder=args.latent_dim,
                    latent_dim_quant=256,
-                   levels_per_dim=10
+                   levels_per_dim=4
                    ).to(device)
 
 """

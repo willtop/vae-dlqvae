@@ -2,14 +2,17 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from .encoder import construct_vae_encoder
+from .vae_constructor import construct_vae_encoder, construct_vae_decoder
 from .quantizer import LatentQuantizer
-from .decoder import construct_vae_decoder
 
 class VanillaVAE(nn.Module):
     def __init__(self, latent_dim):
         super(VanillaVAE, self).__init__()
-        self.conv_channels = [32, 64, 128, 256, 512]
+        self.conv_params = [(96, 11, 4, 2, 1), 
+                            (256, 5, 2, 2, 0), 
+                            (384, 3, 2, 1, 1), 
+                            (384, 3, 2, 1, 1),
+                            (256, 3, 1, 1, 0)]
         self.latent_dim = latent_dim
         # construct encoder module
         (
@@ -17,13 +20,13 @@ class VanillaVAE(nn.Module):
             self.encoder_fc_mu,
             self.encoder_fc_var, 
             self.encoder_conv_out_size
-        ) = construct_vae_encoder(self.conv_channels, self.latent_dim)
-        print(f"Constructed VanillaVAE, with output size after encoder convolution layers: {self.conv_channels[-1]}X{self.encoder_conv_out_size}X{self.encoder_conv_out_size}")
+        ) = construct_vae_encoder(self.conv_params, self.latent_dim)
+        print(f"Constructed VanillaVAE, with output size after encoder convolution layers: {self.conv_params[-1][0]}X{self.encoder_conv_out_size}X{self.encoder_conv_out_size}")
         # construct decoder module
         (
             self.decoder_fc,
             self.decoder_conv_lyrs 
-        ) = construct_vae_decoder(self.conv_channels, self.latent_dim, 
+        ) = construct_vae_decoder(self.conv_params, self.latent_dim, 
                                   encoder_conv_out_size=self.encoder_conv_out_size)
 
     def reparameterize(self, mu, log_var):
@@ -40,7 +43,7 @@ class VanillaVAE(nn.Module):
     
     def decode(self, z):
         z = self.decoder_fc(z)
-        z = z.view(-1, self.conv_channels[-1], self.encoder_conv_out_size, self.encoder_conv_out_size)
+        z = z.view(-1, self.conv_params[-1][0], self.encoder_conv_out_size, self.encoder_conv_out_size)
         x_hat = self.decoder_conv_lyrs(z)
         return x_hat
     
