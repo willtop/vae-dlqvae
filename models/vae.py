@@ -56,7 +56,11 @@ class VanillaVAE(nn.Module):
 class DLQVAE(nn.Module):
     def __init__(self, latent_dim_encoder, latent_dim_quant, levels_per_dim):
         super(DLQVAE, self).__init__()
-        self.conv_channels = [32, 64, 128, 256, 512]
+        self.conv_params = [(96, 11, 4, 2, 1), 
+                            (256, 5, 2, 2, 0), 
+                            (384, 3, 2, 1, 1), 
+                            (384, 3, 2, 1, 1),
+                            (256, 3, 1, 1, 0)]
         self.latent_dim_encoder = latent_dim_encoder
         self.latent_dim_quant = latent_dim_quant
         # number of levels per dimension in the latent space to be quantized
@@ -67,8 +71,8 @@ class DLQVAE(nn.Module):
             self.encoder_fc_mu,
             _, # don't need the variation prediction layer
             self.encoder_conv_out_size
-        ) = construct_vae_encoder(self.conv_channels, self.latent_dim_encoder)
-        print(f"Constructed DLQVAE, with output size after encoder convolution layers: {self.conv_channels[-1]}X{self.encoder_conv_out_size}X{self.encoder_conv_out_size}")
+        ) = construct_vae_encoder(self.conv_params, self.latent_dim_encoder)
+        print(f"Constructed DLQVAE, with output size after encoder convolution layers: {self.conv_params[-1][0]}X{self.encoder_conv_out_size}X{self.encoder_conv_out_size}")
         if self.latent_dim_quant != self.latent_dim_encoder:
             self.fc_encoder_to_quant = nn.Linear(self.latent_dim_encoder, self.latent_dim_quant)
         # pass continuous latent vector through discretization bottleneck
@@ -82,7 +86,7 @@ class DLQVAE(nn.Module):
         (
             self.decoder_fc,
             self.decoder_conv_lyrs 
-        ) = construct_vae_decoder(self.conv_channels, self.latent_dim_encoder, 
+        ) = construct_vae_decoder(self.conv_params, self.latent_dim_encoder, 
                                   encoder_conv_out_size=self.encoder_conv_out_size)
         
     def encode(self, x):
@@ -97,7 +101,7 @@ class DLQVAE(nn.Module):
         if self.latent_dim_quant != self.latent_dim_encoder:
             z = self.fc_quant_to_decoder(z)
         z = self.decoder_fc(z)
-        z = z.view(-1, self.conv_channels[-1], self.encoder_conv_out_size, self.encoder_conv_out_size)
+        z = z.view(-1, self.conv_params[-1][0], self.encoder_conv_out_size, self.encoder_conv_out_size)
         x_hat = self.decoder_conv_lyrs(z)
         return x_hat
 
