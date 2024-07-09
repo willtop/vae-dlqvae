@@ -55,6 +55,7 @@ def load_cifar():
 def load_mpi3d():
     data_transforms = transforms.Compose([
          transforms.ToTensor(),
+         transforms.Resize((224,224))
     ])
     datafile_path = os.path.join("data", "real3d_complicated_shapes_ordered.npz")
     print(f"Loading mpi3d data from {datafile_path}...")
