@@ -17,13 +17,13 @@ parser = argparse.ArgumentParser()
 Hyperparameters
 """
 
-parser.add_argument("--model", type=str, default="VanillaVAE")
+parser.add_argument("--model", type=str, default="vanillavae")
 parser.add_argument("--batch_size", type=int, default=128)
 parser.add_argument("--latent_dim", type=int, default=256)
 parser.add_argument("--n_epochs", type=int, default=20)
 parser.add_argument("--learning_rate", type=float, default=5e-4)
 parser.add_argument("--log_interval", type=int, default=5)
-parser.add_argument("--dataset",  type=str, default='CELEBA')
+parser.add_argument("--dataset",  type=str, default='celeba')
 parser.add_argument("--test", action="store_true")
 
 
@@ -55,7 +55,7 @@ Load data and define batch data loaders
 Set up VQ-VAE model with components defined in ./models/ folder
 """
 
-if args.model == "VanillaVAE":
+if args.model == "vanillavae":
     model = VanillaVAE(args.latent_dim).to(device)
 else:
     model = DLQVAE(latent_dim_encoder=args.latent_dim,
@@ -76,7 +76,7 @@ def train():
         for x, _ in training_loader:
             x = x.to(device)
             optimizer.zero_grad()
-            if args.model == "VanillaVAE":
+            if args.model == "vanillavae":
                 mu, log_var = model.encode(x)
                 z_sampled = model.reparameterize(mu, log_var)
                 x_hat = model.decode(z_sampled)
@@ -121,7 +121,7 @@ def test():
     with torch.no_grad():
         for i, (x, _) in enumerate(validation_loader):
             x = x.to(device)
-            if args.model == "VanillaVAE":
+            if args.model == "vanillavae":
                 mu, log_var = model.encode(x)
                 z_sampled = model.reparameterize(mu, log_var)
                 x_hat =  model.decode(z_sampled)
@@ -146,12 +146,12 @@ def test():
             if i == 0:
                 n = 8
                 comparison = torch.cat([x[:n], x_hat[:n]]).cpu()
-                save_image(comparison, f'results/orig-recon-{args.model}.png', nrow=n)
+                save_image(comparison, f'results/orig-recon-{args.model}-{args.dataset}.png', nrow=n)
 
     test_loss /= len(validation_loader)
     print(f'{args.model} Test set loss: {test_loss:.4f}')
 
-    if args.model == "DLQVAE":
+    if args.model == "dlqvae":
         print("Inspecting trained DLQVAE codebook...")
         model.inspect_learned_codebook()
 
@@ -160,7 +160,7 @@ def test():
 def generate():
     with torch.no_grad():
         x_sampled = model.sample(64, device).cpu()
-        save_image(x_sampled, f"results/gen-samples-{args.model}.png", nrow=8)
+        save_image(x_sampled, f"results/gen-samples-{args.model}-{args.dataset}.png", nrow=8)
     return
 
 if __name__ == "__main__":
