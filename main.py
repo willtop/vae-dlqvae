@@ -18,11 +18,11 @@ Hyperparameters
 """
 
 parser.add_argument("--model", type=str, default="vanillavae")
-parser.add_argument("--batch_size", type=int, default=128)
+parser.add_argument("--batch_size", type=int, default=256)
 parser.add_argument("--latent_dim", type=int, default=256)
-parser.add_argument("--n_epochs", type=int, default=20)
+parser.add_argument("--n_epochs", type=int, default=10)
 parser.add_argument("--learning_rate", type=float, default=5e-4)
-parser.add_argument("--log_interval", type=int, default=5)
+parser.add_argument("--log_interval", type=int, default=1)
 parser.add_argument("--dataset",  type=str, default='celeba')
 parser.add_argument("--test", action="store_true")
 
@@ -59,7 +59,7 @@ if args.model == "vanillavae":
     model = VanillaVAE(args.latent_dim).to(device)
 else:
     model = DLQVAE(latent_dim_encoder=args.latent_dim,
-                   latent_dim_quant=256,
+                   latent_dim_quant=100,
                    levels_per_dim=4
                    ).to(device)
 
@@ -73,7 +73,7 @@ optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, amsgrad=True)
 def train():
     model.train()
     for i in tqdm(range(1, args.n_epochs+1), desc="training epochs"):
-        for x, _ in training_loader:
+        for x, _ in tqdm(training_loader, desc='minibatches within one epoch'):
             x = x.to(device)
             optimizer.zero_grad()
             if args.model == "vanillavae":
