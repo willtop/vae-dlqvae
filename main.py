@@ -18,11 +18,11 @@ Hyperparameters
 """
 
 parser.add_argument("--model", type=str, default="vanillavae")
-parser.add_argument("--batch_size", type=int, default=256)
+parser.add_argument("--batch_size", type=int, default=128)
 parser.add_argument("--latent_dim", type=int, default=256)
-parser.add_argument("--n_epochs", type=int, default=10)
+parser.add_argument("--n_epochs", type=int, default=20)
 parser.add_argument("--learning_rate", type=float, default=5e-4)
-parser.add_argument("--log_interval", type=int, default=1)
+parser.add_argument("--log_interval", type=int, default=5)
 parser.add_argument("--dataset",  type=str, default='celeba')
 parser.add_argument("--test", action="store_true")
 
