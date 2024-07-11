@@ -159,8 +159,11 @@ def test():
 
 def generate():
     with torch.no_grad():
-        x_sampled = model.sample(64, device).cpu()
-        save_image(x_sampled, f"results/gen-samples-{args.model}-{args.dataset}.png", nrow=8)
+        x_sampled = model.sample_random_latent(64, device).cpu()
+        save_image(x_sampled, f"results/gen_samples_{args.model}_{args.dataset}.png", nrow=8)
+        if args.model == "dlqvae":
+            x_sampled = model.sample_traversed_latent(8, device).cpu()
+            save_image(x_sampled, f"results/gen_samples_traverseLatent_{args.model}_{args.dataset}.png", nrow=8)
     return
 
 if __name__ == "__main__":

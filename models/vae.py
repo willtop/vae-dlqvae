@@ -47,7 +47,7 @@ class VanillaVAE(nn.Module):
         x_hat = self.decoder_conv_lyrs(z)
         return x_hat
     
-    def sample(self, n_samples, device):
+    def sample_random_latent(self, n_samples, device):
         self.eval()
         z_sampled = torch.randn(n_samples, self.latent_dim).to(device)
         x_sampled = self.decode(z_sampled)
@@ -117,7 +117,7 @@ class DLQVAE(nn.Module):
 
         return x_hat, quant_idxs, latent_loss_quant, latent_loss_commit
 
-    def sample(self, n_samples, device):
+    def sample_random_latent(self, n_samples, device):
         self.eval()
         z_sampled = torch.stack([
             self.vector_quantizer.values_per_latent[i][
@@ -127,6 +127,30 @@ class DLQVAE(nn.Module):
         assert z_sampled.shape == (n_samples, self.latent_dim_quant)
         x_sampled = self.decode(z_sampled)
         return x_sampled
+    
+    def sample_traversed_latent(self, n_latent_dims_to_traverse, device):
+        assert n_latent_dims_to_traverse <= self.latent_dim_quant
+        self.eval()
+        latent_dims_traversed = np.random.choice(np.arange(self.latent_dim_quant), 
+                                                 size=n_latent_dims_to_traverse,
+                                                 replace=False)
+        z_sampled_base = torch.tensor([
+            self.vector_quantizer.values_per_latent[i][
+                torch.randint(high=self.levels_per_dim, size=(1,))]
+                    for i in range(self.latent_dim_quant)])
+        z_sampled_all = []
+        for latent_dim in latent_dims_traversed:
+            for latent_val in self.vector_quantizer.values_per_latent[latent_dim]:
+                z_sampled = z_sampled_base.clone()
+                # latent_val is a tensor with a single value, nonetheless can directly assign it 
+                # to a 1-D tensor
+                z_sampled[latent_dim] = latent_val
+                z_sampled_all.append(z_sampled)
+        z_sampled_all = torch.stack(z_sampled_all, dim=0).to(device)
+        assert z_sampled_all.shape == (n_latent_dims_to_traverse * self.levels_per_dim, self.latent_dim_quant)
+        x_sampled = self.decode(z_sampled_all)
+        return x_sampled
+
 
     def inspect_learned_codebook(self):
         for i in range(self.latent_dim_quant):
