@@ -59,8 +59,8 @@ if args.model == "vanillavae":
     model = VanillaVAE(args.latent_dim).to(device)
 else:
     model = DLQVAE(latent_dim_encoder=args.latent_dim,
-                   latent_dim_quant=100,
-                   levels_per_dim=4
+                   latent_dim_quant=50,
+                   levels_per_dim=6
                    ).to(device)
 
 """
@@ -146,7 +146,7 @@ def test():
             if i == 0:
                 n = 8
                 comparison = torch.cat([x[:n], x_hat[:n]]).cpu()
-                save_image(comparison, f'results/orig-recon-{args.model}-{args.dataset}.png', nrow=n)
+                save_image(comparison, f'results/orig_recon_{args.model}_{args.dataset}.png', nrow=n)
 
     test_loss /= len(validation_loader)
     print(f'{args.model} Test set loss: {test_loss:.4f}')
