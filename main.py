@@ -20,8 +20,8 @@ Hyperparameters
 parser.add_argument("--model", type=str, default="vanillavae")
 parser.add_argument("--batch_size", type=int, default=128)
 parser.add_argument("--latent_dim", type=int, default=256)
-parser.add_argument("--n_epochs", type=int, default=20)
-parser.add_argument("--learning_rate", type=float, default=5e-4)
+parser.add_argument("--n_epochs", type=int, default=30)
+parser.add_argument("--learning_rate", type=float, default=1e-4)
 parser.add_argument("--log_interval", type=int, default=5)
 parser.add_argument("--dataset",  type=str, default='celeba')
 parser.add_argument("--test", action="store_true")
@@ -60,7 +60,7 @@ if args.model == "vanillavae":
 else:
     model = DLQVAE(latent_dim_encoder=args.latent_dim,
                    latent_dim_quant=50,
-                   levels_per_dim=6
+                   levels_per_dim=4
                    ).to(device)
 
 """
@@ -94,7 +94,7 @@ def train():
                 ) = model(x)
                 # compute losses
                 loss_reconstruct = F.mse_loss(input=x_hat, target=x)
-                loss_latent = latent_loss_quant * 0.1 + latent_loss_commit * 0.1
+                loss_latent = latent_loss_quant * 1 + latent_loss_commit * 1
                 loss = loss_reconstruct + loss_latent
             loss.backward()
             optimizer.step()
@@ -162,8 +162,8 @@ def generate():
         x_sampled = model.sample_random_latent(64, device).cpu()
         save_image(x_sampled, f"results/gen_samples_{args.model}_{args.dataset}.png", nrow=8)
         if args.model == "dlqvae":
-            x_sampled = model.sample_traversed_latent(8, device).cpu()
-            save_image(x_sampled, f"results/gen_samples_traverseLatent_{args.model}_{args.dataset}.png", nrow=8)
+            x_sampled = model.sample_traversed_latent(12, device).cpu()
+            save_image(x_sampled, f"results/gen_samples_traverseLatent_{args.model}_{args.dataset}.png", nrow=model.levels_per_dim)
     return
 
 if __name__ == "__main__":
