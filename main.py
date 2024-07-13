@@ -20,7 +20,7 @@ Hyperparameters
 parser.add_argument("--model", type=str, default="vanillavae")
 parser.add_argument("--batch_size", type=int, default=128)
 parser.add_argument("--latent_dim", type=int, default=256)
-parser.add_argument("--n_epochs", type=int, default=30)
+parser.add_argument("--n_epochs", type=int, default=40)
 parser.add_argument("--learning_rate", type=float, default=1e-4)
 parser.add_argument("--log_interval", type=int, default=5)
 parser.add_argument("--dataset",  type=str, default='celeba')

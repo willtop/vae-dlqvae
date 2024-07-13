@@ -76,15 +76,17 @@ def construct_vae_decoder(conv_params, latent_dim, encoder_conv_out_size):
     
     return decoder_fc, decoder_conv_lyrs
 
+# The following code is just for verifying the dimensions 
+# when using a set of convolution layers
 if __name__ == "__main__":
     input_dim = 224
-    conv_params = [(128, 3, 1, 0, 0), 
-                   (256, 3, 1, 0, 0), 
-                   (384, 5, 1, 0, 0), 
-                   (384, 5, 2, 0, 1),
-                   (256, 5, 2, 0, 1),
-                   (128, 3, 2, 0, 0),
-                   (64, 3, 2, 0, 0)]
+    conv_params = [(64, 3, 1, 0, 0), 
+                   (128, 3, 2, 0, 1), 
+                   (256, 5, 2, 1, 1), 
+                   (256, 5, 3, 1, 0),
+                   (128, 5, 3, 1, 0),
+                   (64, 3, 2, 1, 1),
+                   (64, 3, 2, 1, 0)]
     
     print("encoder hidden dimensions")
     for _, ks, st, pd, _ in conv_params:

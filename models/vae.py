@@ -56,12 +56,13 @@ class VanillaVAE(nn.Module):
 class DLQVAE(nn.Module):
     def __init__(self, latent_dim_encoder, latent_dim_quant, levels_per_dim):
         super(DLQVAE, self).__init__()
-        self.conv_params = [(128, 3, 3, 2, 0), 
-                            (256, 5, 3, 2, 0), 
-                            (384, 7, 3, 1, 0), 
-                            (384, 5, 2, 1, 1),
-                            (256, 3, 1, 1, 0),
-                            (128, 3, 1, 1, 0)]
+        self.conv_params = [(64, 3, 1, 0, 0), 
+                            (128, 3, 2, 0, 1), 
+                            (256, 5, 2, 1, 1), 
+                            (256, 5, 3, 1, 0),
+                            (128, 5, 3, 1, 0),
+                            (64, 3, 2, 1, 1),
+                            (64, 3, 2, 1, 0)]
         self.latent_dim_encoder = latent_dim_encoder
         self.latent_dim_quant = latent_dim_quant
         # number of levels per dimension in the latent space to be quantized
