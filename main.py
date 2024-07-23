@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser()
 Hyperparameters
 """
 
-parser.add_argument("--model", type=str, default="vanillavae")
+parser.add_argument("--model", type=str, default="vanillavae", choices=['vanillavae', 'factorvae', 'dlqvae'])
 parser.add_argument("--batch_size", type=int, default=128)
 parser.add_argument("--latent_dim", type=int, default=256)
 parser.add_argument("--n_epochs", type=int, default=40)
@@ -57,6 +57,8 @@ Set up VQ-VAE model with components defined in ./models/ folder
 
 if args.model == "vanillavae":
     model = VanillaVAE(args.latent_dim).to(device)
+elif:
+    model = FactorVAE(args.latent_dim).to(device)
 else:
     model = DLQVAE(latent_dim_encoder=args.latent_dim,
                    latent_dim_quant=50,
