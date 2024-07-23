@@ -9,6 +9,7 @@ import argparse
 from tqdm import tqdm
 import utils
 from models.vae import *
+from models.building_blocks import FactorVAE_Discriminator
 
 
 parser = argparse.ArgumentParser()
@@ -55,10 +56,12 @@ Load data and define batch data loaders
 Set up VQ-VAE model with components defined in ./models/ folder
 """
 
+auxiliary_discriminator = None 
 if args.model == "vanillavae":
     model = VanillaVAE(args.latent_dim).to(device)
-elif:
+elif args.model == "factorvae":
     model = FactorVAE(args.latent_dim).to(device)
+    auxiliary_discriminator = FactorVAE_Discriminator(args.latent_dim).to(device)
 else:
     model = DLQVAE(latent_dim_encoder=args.latent_dim,
                    latent_dim_quant=50,
@@ -69,14 +72,15 @@ else:
 Set up optimizer and training loop
 """
 optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, amsgrad=True)
-
+if auxiliary_discriminator:
+    optimizer_discriminator = optim.Adam(auxiliary_discriminator.parameters(), lr=args.learning_rate, amsgrad=True)
 
 
 def train():
     model.train()
     for i in tqdm(range(1, args.n_epochs+1), desc="training epochs"):
-        for x, _ in tqdm(training_loader, desc='minibatches within one epoch'):
-            x = x.to(device)
+        for x, x2 in tqdm(training_loader, desc='minibatches within one epoch'):
+            x, x2 = x.to(device), x2.to(device)
             optimizer.zero_grad()
             if args.model == "vanillavae":
                 mu, log_var = model.encode(x)
@@ -87,6 +91,28 @@ def train():
                 loss_reconstruct = F.mse_loss(input=x_hat, target=x)
                 loss_latent = -0.5 * torch.mean(1 + log_var - mu.pow(2) - log_var.exp())
                 loss = loss_reconstruct + 0.0005 * loss_latent
+            elif args.model == "factorvae":
+                loss_gamma = 3.2 # value used in the FactorVAE repo
+                ### loss for VAE parameters update ###
+                mu, log_var = model.encode(x)
+                z_sampled = model.reparameterize(mu, log_var)
+                x_hat = model.decode(z_sampled)
+                assert list(x.shape) == list(x_hat.shape)
+                # conventional VAE losses
+                loss_reconstruct = F.mse_loss(input=x_hat, target=x)
+                loss_latent = -0.5 * torch.mean(1 + log_var - mu.pow(2) - log_var.exp())
+                # total correlation VAE loss
+                p_vals_discriminator = auxiliary_discriminator(z_sampled)
+                loss_kc = torch.mean(torch.log(p_vals_discriminator)-torch.log(1-p_vals_discriminator))
+                loss = loss_reconstruct + loss_latent - loss_gamma * loss_kc
+
+                ### loss for discriminator parameters update ###
+                mu_2, log_var_2 = model.encode(x2)
+                z_sampled_2 = model.reparameterize(mu_2, log_var_2)
+                z_sampled_2_permed = utils.permute_dims(z_sampled_2).detach()
+                p_vals_permed_discriminator = auxiliary_discriminator(z_sampled_2_permed)
+                loss_discriminator = torch.mean(torch.log(p_vals_discriminator)+
+                                                torch.log(1-p_vals_permed_discriminator))
             else:
                 (
                     x_hat,
@@ -100,6 +126,9 @@ def train():
                 loss = loss_reconstruct + loss_latent
             loss.backward()
             optimizer.step()
+            if auxiliary_discriminator:
+                loss_discriminator.backword()
+                optimizer_discriminator.step()
 
         if i % args.log_interval == 0:
             print(f"Update # {i}" + 

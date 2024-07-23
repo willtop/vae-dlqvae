@@ -13,6 +13,29 @@ from einops import pack, rearrange, unpack
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+class FactorVAE_Discriminator(nn.Module):
+    def __init__(self, latent_dim):
+        super(FactorVAE_Discriminator, self).__init__()
+        self.latent_dim = latent_dim
+        self.net = nn.Sequential(
+            nn.Linear(latent_dim, 1000),
+            nn.LeakyReLU(0.2, True),
+            nn.Linear(1000, 1000),
+            nn.LeakyReLU(0.2, True),
+            nn.Linear(1000, 1000),
+            nn.LeakyReLU(0.2, True),
+            nn.Linear(1000, 1000),
+            nn.LeakyReLU(0.2, True),
+            nn.Linear(1000, 1000),
+            nn.LeakyReLU(0.2, True),
+            # original FactorVAE repo has two un-normalized output elements 
+            # as D(z) and 1-D(z) respectively
+            nn.Linear(1000, 1),
+            nn.Sigmoid()
+        )
+
+    def forward(self, z):
+        return self.net(z).squeeze()
 
 class VectorQuantizer(nn.Module):
     """

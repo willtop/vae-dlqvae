@@ -1,3 +1,4 @@
+import random
 import torch
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
@@ -15,6 +16,21 @@ class MPI3D(Dataset):
 
     def __getitem__(self, index):
         return (self.transforms(self.imgs[index]), torch.tensor(0))
+    
+# for FactorVAE training
+class MPI3D_pairs(Dataset):
+    def __init__(self, imgs, transforms):
+        self.imgs = imgs
+        self.transforms = transforms
+    
+    def __len__(self):
+        return np.shape(self.imgs)[0]
+    
+    def __getitem__(self, index):
+        img1 = self.imgs[index]
+        img2_id = random.choice(range(np.shape(self.imgs)[0]))
+        img2 = self.imgs[img2_id]
+        return (self.transforms(img1), self.transforms(img2))
 
 # newly added loader for celebA
 def load_celeba():
@@ -115,6 +131,17 @@ def load_data_and_data_loaders(dataset, batch_size):
     return training_data, validation_data, training_loader, validation_loader
 
 
+def permute_dims(z):
+    assert z.dim() == 2
+
+    batch_size, _ = z.size()
+    perm_z = []
+    for z_j in z.split(1, 1):
+        perm = torch.randperm(batch_size).to(z.device)
+        perm_z_j = z_j[perm]
+        perm_z.append(perm_z_j)
+
+    return torch.cat(perm_z, 1)
 
 def save_model_and_parameters(model, hyperparameters, filepath, args):
     results_to_save = {
