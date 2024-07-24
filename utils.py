@@ -18,7 +18,7 @@ class MPI3D(Dataset):
         return (self.transforms(self.imgs[index]), torch.tensor(0))
     
 # for FactorVAE training
-class MPI3D_pairs(Dataset):
+class MPI3D_Pairs(Dataset):
     def __init__(self, imgs, transforms):
         self.imgs = imgs
         self.transforms = transforms
@@ -68,7 +68,7 @@ def load_cifar():
                            ]))
     return train, val
 
-def load_mpi3d():
+def load_mpi3d(whether_pairs=False):
     data_transforms = transforms.Compose([
          transforms.ToTensor(),
          transforms.Resize((224,224))
@@ -80,14 +80,20 @@ def load_mpi3d():
     n_imgs = mpi3d_data.shape[0]
     assert n_imgs == 460800
 
-    mpi3d_dataset = MPI3D(mpi3d_data, data_transforms)
+    if whether_pairs:
+        mpi3d_dataset = MPI3D_Pairs(mpi3d_data, data_transforms)
+    else:
+        mpi3d_dataset = MPI3D(mpi3d_data, data_transforms)
     
     print("[MPI3D] Getting meta splits.....")
     # get meta split indices
     perm = np.arange(n_imgs)
     np.random.shuffle(perm)
+    # use 300K for training the encoder
+    # note: while this is the same number fo samples as in Diversified metaML setup
+    # the exact samples aren't guaranteed to be identical due to shuffled indices 
     meta_train_idxs, meta_valid_idxs = \
-                perm[:400000], perm[400000:]
+                perm[:300000], perm[300000:]
     
     mpi3d_meta_train, mpi3d_meta_valid = \
                 Subset(mpi3d_dataset, meta_train_idxs), \
@@ -109,24 +115,19 @@ def data_loaders(train_data, val_data, batch_size):
     return train_loader, val_loader
 
 
-def load_data_and_data_loaders(dataset, batch_size):
-    if dataset == 'cifar10':
+def load_data_and_data_loaders(dataset_name, batch_size):
+    if dataset_name == 'cifar10':
         training_data, validation_data = load_cifar()
-        training_loader, validation_loader = data_loaders(
-            training_data, validation_data, batch_size)
-
-    elif dataset == 'celeba':
+    elif dataset_name == 'celeba':
         training_data, validation_data = load_celeba()
-        training_loader, validation_loader = data_loaders(
-            training_data, validation_data, batch_size)
-        
-    elif dataset == 'mpi3d':
+    elif dataset_name == 'mpi3d':
         training_data, validation_data = load_mpi3d()
-        training_loader, validation_loader = data_loaders(
-            training_data, validation_data, batch_size)
+    elif dataset_name == 'mpi3d_pairs':
+        training_data, validation_data = load_mpi3d(whether_pairs=True)
     else:
-        raise ValueError(
-            'Invalid dataset: only CIFAR10 and CELEBA datasets are supported.')
+        raise ValueError(f'Invalid dataset name: {dataset_name}.')
+    training_loader, validation_loader = data_loaders(
+            training_data, validation_data, batch_size)
 
     return training_data, validation_data, training_loader, validation_loader
 

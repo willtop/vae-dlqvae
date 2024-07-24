@@ -28,14 +28,15 @@ class FactorVAE_Discriminator(nn.Module):
             nn.LeakyReLU(0.2, True),
             nn.Linear(1000, 1000),
             nn.LeakyReLU(0.2, True),
-            # original FactorVAE repo has two un-normalized output elements 
-            # as D(z) and 1-D(z) respectively
-            nn.Linear(1000, 1),
-            nn.Sigmoid()
+            # outputs two logits for D(z) and 1-D(z) respectively
+            # so later in VAE and discriminator losses (which contain log)
+            # can directly compute without taking log
+            nn.Linear(1000, 2)
         )
 
     def forward(self, z):
-        return self.net(z).squeeze()
+        # originally had squeeze(), don't think it's needed
+        return self.net(z)
 
 class VectorQuantizer(nn.Module):
     """

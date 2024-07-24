@@ -30,6 +30,11 @@ parser.add_argument("--test", action="store_true")
 
 args = parser.parse_args()
 
+# for factorVAE, due to the training of discriminator, has to have a pair of images
+# returned from the dataloader, reflected in this code base by the dataset name
+if args.model == "factorvae":
+    assert args.dataset.endswith("pairs")
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # add in the dataset to the filename
@@ -56,7 +61,7 @@ Load data and define batch data loaders
 Set up VQ-VAE model with components defined in ./models/ folder
 """
 
-auxiliary_discriminator = None 
+auxiliary_discriminator, optimizer_discriminator = None, None 
 if args.model == "vanillavae":
     model = VanillaVAE(args.latent_dim).to(device)
 elif args.model == "factorvae":
@@ -81,8 +86,8 @@ def train():
     for i in tqdm(range(1, args.n_epochs+1), desc="training epochs"):
         for x, x2 in tqdm(training_loader, desc='minibatches within one epoch'):
             x, x2 = x.to(device), x2.to(device)
-            optimizer.zero_grad()
             if args.model == "vanillavae":
+                optimizer.zero_grad()
                 mu, log_var = model.encode(x)
                 z_sampled = model.reparameterize(mu, log_var)
                 x_hat = model.decode(z_sampled)
@@ -91,7 +96,10 @@ def train():
                 loss_reconstruct = F.mse_loss(input=x_hat, target=x)
                 loss_latent = -0.5 * torch.mean(1 + log_var - mu.pow(2) - log_var.exp())
                 loss = loss_reconstruct + 0.0005 * loss_latent
+                loss.backward()
+                optimizer.step()
             elif args.model == "factorvae":
+                optimizer.zero_grad()
                 loss_gamma = 3.2 # value used in the FactorVAE repo
                 ### loss for VAE parameters update ###
                 mu, log_var = model.encode(x)
@@ -102,18 +110,36 @@ def train():
                 loss_reconstruct = F.mse_loss(input=x_hat, target=x)
                 loss_latent = -0.5 * torch.mean(1 + log_var - mu.pow(2) - log_var.exp())
                 # total correlation VAE loss
-                p_vals_discriminator = auxiliary_discriminator(z_sampled)
-                loss_kc = torch.mean(torch.log(p_vals_discriminator)-torch.log(1-p_vals_discriminator))
-                loss = loss_reconstruct + loss_latent - loss_gamma * loss_kc
+                p_logits_discriminator = auxiliary_discriminator(z_sampled)
+                # in one repo it's commented if using discriminator which computes sigmoid
+                # the following loss would change correspondingly, resulting inferior performance
+                loss_kc = torch.mean(p_logits_discriminator[:,0]-p_logits_discriminator[:,1])
+                loss = loss_reconstruct + loss_latent + loss_gamma * loss_kc
+                loss.backward(retain_graph=True) # retain graph for p_logits_discriminator
+                optimizer.step()
 
                 ### loss for discriminator parameters update ###
+                optimizer_discriminator.zero_grad() # this step also clears the above undesired gradients on the discriminator
+                zeros = torch.zeros(x.shape[0], dtype=torch.long, device=device)
+                ones = torch.ones_like(zeros)
+                # compute the original latent encoding and discriminator logits again
+                # with detached latent features to disentangle it from
+                # the above computation graph
+                p_logits_discriminator = auxiliary_discriminator(z_sampled.detach())
                 mu_2, log_var_2 = model.encode(x2)
                 z_sampled_2 = model.reparameterize(mu_2, log_var_2)
                 z_sampled_2_permed = utils.permute_dims(z_sampled_2).detach()
-                p_vals_permed_discriminator = auxiliary_discriminator(z_sampled_2_permed)
-                loss_discriminator = torch.mean(torch.log(p_vals_discriminator)+
-                                                torch.log(1-p_vals_permed_discriminator))
+                p_logits_permed_discriminator = auxiliary_discriminator(z_sampled_2_permed)
+                loss_discriminator = 0.5*(F.cross_entropy(p_logits_discriminator, zeros)+
+                                            F.cross_entropy(p_logits_permed_discriminator, ones))
+                loss_discriminator.backward()
+
+                # update after both loss graphes finish computing, since neural net parameter updates triggered
+                # by the first loss would affect second loss computation and pytorch raises an error
+                
+                optimizer_discriminator.step()
             else:
+                optimizer.zero_grad()
                 (
                     x_hat,
                     quant_idxs,
@@ -124,11 +150,8 @@ def train():
                 loss_reconstruct = F.mse_loss(input=x_hat, target=x)
                 loss_latent = latent_loss_quant * 1 + latent_loss_commit * 1
                 loss = loss_reconstruct + loss_latent
-            loss.backward()
-            optimizer.step()
-            if auxiliary_discriminator:
-                loss_discriminator.backword()
-                optimizer_discriminator.step()
+                loss.backward()
+                optimizer.step()
 
         if i % args.log_interval == 0:
             print(f"Update # {i}" + 
