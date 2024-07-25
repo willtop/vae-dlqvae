@@ -95,7 +95,7 @@ class FactorVAE(nn.Module):
         x_hat = self.decoder_conv_lyrs(z)
         return x_hat
     
-    def sample(self, n_samples, device):
+    def sample_random_latent(self, n_samples, device):
         self.eval()
         z_sampled = torch.randn(n_samples, self.latent_dim).to(device)
         x_sampled = self.decode(z_sampled)

@@ -175,7 +175,7 @@ def test():
     with torch.no_grad():
         for i, (x, _) in enumerate(validation_loader):
             x = x.to(device)
-            if args.model == "vanillavae":
+            if args.model in ["vanillavae", "factorvae"]:
                 mu, log_var = model.encode(x)
                 z_sampled = model.reparameterize(mu, log_var)
                 x_hat =  model.decode(z_sampled)
@@ -183,7 +183,7 @@ def test():
                 # compute losses
                 loss_reconstruct = F.mse_loss(input=x_hat, target=x)
                 loss_KL = -0.5 * torch.mean(1 + log_var - mu.pow(2) - log_var.exp())
-                loss = loss_reconstruct + 0.0005 * loss_KL
+                loss = loss_reconstruct + loss_KL
             else:
                 (
                     x_hat,
