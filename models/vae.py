@@ -1,6 +1,7 @@
 
 import torch
 import torch.nn as nn
+import torch.nn.init as init
 import numpy as np
 from .vae_constructor import construct_vae_encoder, construct_vae_decoder
 from .building_blocks import LatentQuantizer
@@ -8,11 +9,11 @@ from .building_blocks import LatentQuantizer
 class VanillaVAE(nn.Module):
     def __init__(self, latent_dim):
         super(VanillaVAE, self).__init__()
-        self.conv_params = [(96, 11, 4, 2, 1), 
-                            (256, 5, 2, 2, 0), 
-                            (384, 3, 2, 1, 1), 
-                            (384, 3, 2, 1, 1),
-                            (256, 3, 1, 1, 0)]
+        self.conv_params = [(32, 11, 4, 2, 1), 
+                            (32, 5, 2, 2, 0), 
+                            (64, 3, 2, 1, 1), 
+                            (64, 3, 2, 1, 1),
+                            (128, 3, 1, 1, 0)]
         self.latent_dim = latent_dim
         # construct encoder module
         (
@@ -20,16 +21,20 @@ class VanillaVAE(nn.Module):
             self.encoder_fc_mu,
             self.encoder_fc_var, 
             self.encoder_conv_out_size
-        ) = construct_vae_encoder(self.conv_params, self.latent_dim)
+        ) = construct_vae_encoder(self.conv_params, 
+                                  self.latent_dim,
+                                  256)
         print(f"Constructed VanillaVAE, with output size after encoder convolution layers: {self.conv_params[-1][0]}X{self.encoder_conv_out_size}X{self.encoder_conv_out_size}")
         # construct decoder module
         (
             self.decoder_fc,
             self.decoder_conv_lyrs 
-        ) = construct_vae_decoder(self.conv_params, self.latent_dim, 
+        ) = construct_vae_decoder(self.conv_params, 
+                                  self.latent_dim, 
+                                  256,
                                   encoder_conv_out_size=self.encoder_conv_out_size)
 
-    def reparameterize(self, mu, log_var):
+    def reparametrize(self, mu, log_var):
         std = torch.exp(0.5 * log_var)
         noise = torch.randn_like(std)
         return noise * std + mu
@@ -53,14 +58,15 @@ class VanillaVAE(nn.Module):
         x_sampled = self.decode(z_sampled)
         return x_sampled
     
+
 class FactorVAE(nn.Module):
     def __init__(self, latent_dim):
         super(FactorVAE, self).__init__()
-        self.conv_params = [(96, 11, 4, 2, 1), 
-                            (256, 5, 2, 2, 0), 
-                            (384, 3, 2, 1, 1), 
-                            (384, 3, 2, 1, 1),
-                            (256, 3, 1, 1, 0)]
+        self.conv_params = [(32, 11, 4, 2, 1), 
+                            (32, 5, 2, 2, 0), 
+                            (64, 3, 2, 1, 1), 
+                            (64, 3, 2, 1, 1),
+                            (128, 3, 1, 1, 0)]
         self.latent_dim = latent_dim
         # construct encoder module
         (
@@ -68,16 +74,20 @@ class FactorVAE(nn.Module):
             self.encoder_fc_mu,
             self.encoder_fc_var, 
             self.encoder_conv_out_size
-        ) = construct_vae_encoder(self.conv_params, self.latent_dim)
+        ) = construct_vae_encoder(self.conv_params, 
+                                  self.latent_dim, 
+                                  256)
         print(f"Constructed FactorVAE, with output size after encoder convolution layers: {self.conv_params[-1][0]}X{self.encoder_conv_out_size}X{self.encoder_conv_out_size}")
         # construct decoder module
         (
             self.decoder_fc,
             self.decoder_conv_lyrs 
-        ) = construct_vae_decoder(self.conv_params, self.latent_dim, 
+        ) = construct_vae_decoder(self.conv_params, 
+                                  self.latent_dim, 
+                                  256,
                                   encoder_conv_out_size=self.encoder_conv_out_size)
 
-    def reparameterize(self, mu, log_var):
+    def reparametrize(self, mu, log_var):
         std = torch.exp(0.5 * log_var)
         noise = torch.randn_like(std)
         return noise * std + mu
@@ -122,7 +132,7 @@ class DLQVAE(nn.Module):
             self.encoder_fc_mu,
             _, # don't need the variation prediction layer
             self.encoder_conv_out_size
-        ) = construct_vae_encoder(self.conv_params, self.latent_dim_encoder)
+        ) = construct_vae_encoder(self.conv_params, self.latent_dim_encoder, 256)
         print(f"Constructed DLQVAE, with output size after encoder convolution layers: {self.conv_params[-1][0]}X{self.encoder_conv_out_size}X{self.encoder_conv_out_size}")
         if self.latent_dim_quant != self.latent_dim_encoder:
             self.fc_encoder_to_quant = nn.Linear(self.latent_dim_encoder, self.latent_dim_quant)
@@ -137,7 +147,7 @@ class DLQVAE(nn.Module):
         (
             self.decoder_fc,
             self.decoder_conv_lyrs 
-        ) = construct_vae_decoder(self.conv_params, self.latent_dim_encoder, 
+        ) = construct_vae_decoder(self.conv_params, self.latent_dim_encoder, 256,
                                   encoder_conv_out_size=self.encoder_conv_out_size)
         
     def encode(self, x):

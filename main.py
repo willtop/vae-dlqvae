@@ -19,13 +19,14 @@ Hyperparameters
 """
 
 parser.add_argument("--model", type=str, default="vanillavae", choices=['vanillavae', 'factorvae', 'dlqvae'])
-parser.add_argument("--batch_size", type=int, default=128)
+parser.add_argument("--batch_size", type=int, default=64)
 parser.add_argument("--latent_dim", type=int, default=256)
-parser.add_argument("--n_epochs", type=int, default=40)
+parser.add_argument("--n_epochs", type=int, default=500)
 parser.add_argument("--learning_rate", type=float, default=1e-4)
 parser.add_argument("--log_interval", type=int, default=5)
 parser.add_argument("--dataset",  type=str, default='celeba')
 parser.add_argument("--test", action="store_true")
+parser.add_argument("--debug", action="store_true")
 
 
 args = parser.parse_args()
@@ -56,7 +57,7 @@ Load data and define batch data loaders
     validation_data, 
     training_loader, 
     validation_loader
-) = utils.load_data_and_data_loaders(args.dataset, args.batch_size)
+) = utils.load_data_and_data_loaders(args.dataset, args.batch_size, args.debug)
 """
 Set up VQ-VAE model with components defined in ./models/ folder
 """
@@ -89,13 +90,13 @@ def train():
             if args.model == "vanillavae":
                 optimizer.zero_grad()
                 mu, log_var = model.encode(x)
-                z_sampled = model.reparameterize(mu, log_var)
+                z_sampled = model.reparametrize(mu, log_var)
                 x_hat = model.decode(z_sampled)
                 assert list(x.shape) == list(x_hat.shape)
                 # compute losses
-                loss_reconstruct = F.mse_loss(input=x_hat, target=x)
+                loss_reconstruct = utils.reconstruction_loss(x_hat, x)
                 loss_latent = -0.5 * torch.mean(1 + log_var - mu.pow(2) - log_var.exp())
-                loss = loss_reconstruct + 0.0005 * loss_latent
+                loss = loss_reconstruct + 0.05 * loss_latent
                 loss.backward()
                 optimizer.step()
             elif args.model == "factorvae":
@@ -103,12 +104,12 @@ def train():
                 loss_gamma = 3.2 # value used in the FactorVAE repo
                 ### loss for VAE parameters update ###
                 mu, log_var = model.encode(x)
-                z_sampled = model.reparameterize(mu, log_var)
+                z_sampled = model.reparametrize(mu, log_var)
                 x_hat = model.decode(z_sampled)
                 assert list(x.shape) == list(x_hat.shape)
                 # conventional VAE losses
                 # for reconstruction loss, original repo uses cross entropy
-                loss_reconstruct = F.binary_cross_entropy(input=x_hat, target=x)
+                loss_reconstruct = utils.reconstruction_loss(x_hat, x)
                 loss_latent = -0.5 * (1 + log_var - mu.pow(2) - log_var.exp()).sum(dim=1).mean()
                 # total correlation VAE loss
                 p_logits_discriminator = auxiliary_discriminator(z_sampled)
@@ -130,7 +131,7 @@ def train():
                 # with detached latent features to disentangle it from the above computation graph
                 p_logits_discriminator = auxiliary_discriminator(z_sampled.detach())
                 mu_2, log_var_2 = model.encode(x2)
-                z_sampled_2 = model.reparameterize(mu_2, log_var_2)
+                z_sampled_2 = model.reparametrize(mu_2, log_var_2)
                 z_sampled_2_permed = utils.permute_dims(z_sampled_2).detach()
                 p_logits_permed_discriminator = auxiliary_discriminator(z_sampled_2_permed)
                 loss_discriminator = 0.5*(F.cross_entropy(p_logits_discriminator, zeros)+
@@ -172,11 +173,12 @@ def test():
     model.eval()
     test_loss = 0
     with torch.no_grad():
-        for i, (x, _) in enumerate(validation_loader):
+        testing_loader = validation_loader if not args.debug else training_loader 
+        for i, (x, _) in enumerate(testing_loader):
             x = x.to(device)
             if args.model in ["vanillavae", "factorvae"]:
                 mu, log_var = model.encode(x)
-                z_sampled = model.reparameterize(mu, log_var)
+                z_sampled = model.reparametrize(mu, log_var)
                 x_hat =  model.decode(z_sampled)
                 assert list(x.shape)==list(x_hat.shape)
                 # compute losses
@@ -212,8 +214,8 @@ def test():
 
 def generate():
     with torch.no_grad():
-        x_sampled = model.sample_random_latent(64, device).cpu()
-        save_image(x_sampled, f"results/gen_samples_{args.model}_{args.dataset}.png", nrow=8)
+        x_sampled = model.sample_random_latent(81, device).cpu()
+        save_image(x_sampled, f"results/gen_samples_{args.model}_{args.dataset}.png", nrow=9)
         if args.model == "dlqvae":
             x_sampled = model.sample_traversed_latent(12, device).cpu()
             save_image(x_sampled, f"results/gen_samples_traverseLatent_{args.model}_{args.dataset}.png", nrow=model.levels_per_dim)

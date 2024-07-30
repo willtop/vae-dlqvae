@@ -1,5 +1,6 @@
 import random
 import torch
+import torch.nn.functional as F
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 from torch.utils.data import Dataset, Subset, DataLoader
@@ -102,7 +103,11 @@ def load_mpi3d(whether_pairs=False):
     return mpi3d_meta_train, mpi3d_meta_valid
 
 
-def data_loaders(train_data, val_data, batch_size):
+def data_loaders(train_data, val_data, batch_size, whether_debug):
+    # for debugging, let the model fit one minibatch and see if it learns well
+    if whether_debug:
+        train_data = Subset(train_data, np.arange(batch_size))
+        val_data = Subset(val_data, np.arange(batch_size))
 
     train_loader = DataLoader(train_data,
                               batch_size=batch_size,
@@ -115,7 +120,7 @@ def data_loaders(train_data, val_data, batch_size):
     return train_loader, val_loader
 
 
-def load_data_and_data_loaders(dataset_name, batch_size):
+def load_data_and_data_loaders(dataset_name, batch_size, whether_debug):
     if dataset_name == 'cifar10':
         training_data, validation_data = load_cifar()
     elif dataset_name == 'celeba':
@@ -127,10 +132,13 @@ def load_data_and_data_loaders(dataset_name, batch_size):
     else:
         raise ValueError(f'Invalid dataset name: {dataset_name}.')
     training_loader, validation_loader = data_loaders(
-            training_data, validation_data, batch_size)
+            training_data, validation_data, batch_size, whether_debug)
 
     return training_data, validation_data, training_loader, validation_loader
 
+def reconstruction_loss(x_hat, x):
+    return F.binary_cross_entropy(input=x_hat, target=x)
+    return F.mse_loss(input=x_hat, target=x)
 
 def permute_dims(z):
     assert z.dim() == 2

@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 
 
-def construct_vae_encoder(conv_params, latent_dim):
+def construct_vae_encoder(conv_params, latent_dim, fc_hidden_dim):
     in_dim = 3 
     encoder_conv_list = []
     for (n_chnl, kn_size, strd, pad, _) in conv_params:
@@ -26,29 +26,29 @@ def construct_vae_encoder(conv_params, latent_dim):
     conv_out_size = dummy_out.shape[2]
     # add in flattened fully connected layers
     encoder_fc_mu = nn.Sequential(
-        nn.Linear(conv_params[-1][0] * conv_out_size**2, 4096),
+        nn.Linear(conv_params[-1][0] * conv_out_size**2, fc_hidden_dim),
         nn.LeakyReLU(),
-        nn.Linear(4096, 4096),
+        nn.Linear(fc_hidden_dim, fc_hidden_dim),
         nn.LeakyReLU(),
-        nn.Linear(4096, latent_dim)
+        nn.Linear(fc_hidden_dim, latent_dim)
     )
     encoder_fc_var = nn.Sequential(
-        nn.Linear(conv_params[-1][0] * conv_out_size**2, 4096),
+        nn.Linear(conv_params[-1][0] * conv_out_size**2, fc_hidden_dim),
         nn.LeakyReLU(),
-        nn.Linear(4096, 4096),
+        nn.Linear(fc_hidden_dim, fc_hidden_dim),
         nn.LeakyReLU(),
-        nn.Linear(4096, latent_dim)
+        nn.Linear(fc_hidden_dim, latent_dim)
     )
     return encoder_conv_lyrs, encoder_fc_mu, encoder_fc_var, conv_out_size
 
-def construct_vae_decoder(conv_params, latent_dim, encoder_conv_out_size):
+def construct_vae_decoder(conv_params, latent_dim, fc_hidden_dim, encoder_conv_out_size):
     decoder_conv_list = []
     decoder_fc = nn.Sequential(
-        nn.Linear(latent_dim, 4096),
+        nn.Linear(latent_dim, fc_hidden_dim),
         nn.LeakyReLU(),
-        nn.Linear(4096, 4096),
+        nn.Linear(fc_hidden_dim, fc_hidden_dim),
         nn.LeakyReLU(),
-        nn.Linear(4096, conv_params[-1][0] * encoder_conv_out_size**2)
+        nn.Linear(fc_hidden_dim, conv_params[-1][0] * encoder_conv_out_size**2)
     )
     # reverse the order of convolutional layer specs, copy so don't alter the outside list
     conv_params = conv_params.copy()
@@ -86,13 +86,11 @@ def construct_vae_decoder(conv_params, latent_dim, encoder_conv_out_size):
 # when using a set of convolution layers
 if __name__ == "__main__":
     input_dim = 224
-    conv_params = [(64, 3, 1, 0, 0), 
-                   (128, 3, 2, 0, 1), 
-                   (256, 5, 2, 1, 1), 
-                   (256, 5, 3, 1, 0),
-                   (128, 5, 3, 1, 0),
-                   (64, 3, 2, 1, 1),
-                   (64, 3, 2, 1, 0)]
+    conv_params = [(32, 11, 4, 2, 1), 
+                    (32, 5, 2, 2, 0), 
+                    (64, 3, 2, 1, 1), 
+                    (64, 3, 2, 1, 1),
+                    (128, 3, 1, 1, 0)]
     
     print("encoder hidden dimensions")
     for _, ks, st, pd, _ in conv_params:
