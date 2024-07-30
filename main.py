@@ -26,7 +26,6 @@ parser.add_argument("--learning_rate", type=float, default=1e-4)
 parser.add_argument("--log_interval", type=int, default=5)
 parser.add_argument("--dataset",  type=str, default='celeba')
 parser.add_argument("--test", action="store_true")
-parser.add_argument("--debug", action="store_true")
 
 
 args = parser.parse_args()
@@ -57,7 +56,7 @@ Load data and define batch data loaders
     validation_data, 
     training_loader, 
     validation_loader
-) = utils.load_data_and_data_loaders(args.dataset, args.batch_size, args.debug)
+) = utils.load_data_and_data_loaders(args.dataset, args.batch_size)
 """
 Set up VQ-VAE model with components defined in ./models/ folder
 """
@@ -85,7 +84,7 @@ if auxiliary_discriminator:
 def train():
     model.train()
     for i in tqdm(range(1, args.n_epochs+1), desc="training epochs"):
-        for x, x2 in tqdm(training_loader, desc='minibatches within one epoch'):
+        for x, x2 in training_loader:
             x, x2 = x.to(device), x2.to(device)
             if args.model == "vanillavae":
                 optimizer.zero_grad()
@@ -101,7 +100,7 @@ def train():
                 optimizer.step()
             elif args.model == "factorvae":
                 optimizer.zero_grad()
-                loss_gamma = 3.2 # value used in the FactorVAE repo
+                loss_gamma = 0#3.2 # value used in the FactorVAE repo
                 ### loss for VAE parameters update ###
                 mu, log_var = model.encode(x)
                 z_sampled = model.reparametrize(mu, log_var)
@@ -173,8 +172,7 @@ def test():
     model.eval()
     test_loss = 0
     with torch.no_grad():
-        testing_loader = validation_loader if not args.debug else training_loader 
-        for i, (x, _) in enumerate(testing_loader):
+        for i, (x, _) in enumerate(validation_loader):
             x = x.to(device)
             if args.model in ["vanillavae", "factorvae"]:
                 mu, log_var = model.encode(x)

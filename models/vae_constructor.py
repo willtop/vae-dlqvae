@@ -90,7 +90,7 @@ if __name__ == "__main__":
                     (32, 5, 2, 2, 0), 
                     (64, 3, 2, 1, 1), 
                     (64, 3, 2, 1, 1),
-                    (128, 3, 1, 1, 0)]
+                    (64, 3, 1, 1, 0)]
     
     print("encoder hidden dimensions")
     for _, ks, st, pd, _ in conv_params:
