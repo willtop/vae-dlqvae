@@ -28,10 +28,14 @@ def construct_vae_encoder(conv_params, latent_dim):
     encoder_fc_mu = nn.Sequential(
         nn.Linear(conv_params[-1][0] * conv_out_size**2, 4096),
         nn.LeakyReLU(),
+        nn.Linear(4096, 4096),
+        nn.LeakyReLU(),
         nn.Linear(4096, latent_dim)
     )
     encoder_fc_var = nn.Sequential(
         nn.Linear(conv_params[-1][0] * conv_out_size**2, 4096),
+        nn.LeakyReLU(),
+        nn.Linear(4096, 4096),
         nn.LeakyReLU(),
         nn.Linear(4096, latent_dim)
     )
@@ -41,6 +45,8 @@ def construct_vae_decoder(conv_params, latent_dim, encoder_conv_out_size):
     decoder_conv_list = []
     decoder_fc = nn.Sequential(
         nn.Linear(latent_dim, 4096),
+        nn.LeakyReLU(),
+        nn.Linear(4096, 4096),
         nn.LeakyReLU(),
         nn.Linear(4096, conv_params[-1][0] * encoder_conv_out_size**2)
     )

@@ -17,21 +17,22 @@ class FactorVAE_Discriminator(nn.Module):
     def __init__(self, latent_dim):
         super(FactorVAE_Discriminator, self).__init__()
         self.latent_dim = latent_dim
+        self.hidden_units = 500
         self.net = nn.Sequential(
-            nn.Linear(latent_dim, 1000),
+            nn.Linear(latent_dim, self.hidden_units),
             nn.LeakyReLU(0.2, True),
-            nn.Linear(1000, 1000),
+            nn.Linear(self.hidden_units, self.hidden_units),
             nn.LeakyReLU(0.2, True),
-            nn.Linear(1000, 1000),
+            nn.Linear(self.hidden_units, self.hidden_units),
             nn.LeakyReLU(0.2, True),
-            nn.Linear(1000, 1000),
+            nn.Linear(self.hidden_units, self.hidden_units),
             nn.LeakyReLU(0.2, True),
-            nn.Linear(1000, 1000),
+            nn.Linear(self.hidden_units, self.hidden_units),
             nn.LeakyReLU(0.2, True),
             # outputs two logits for D(z) and 1-D(z) respectively
             # so later in VAE and discriminator losses (which contain log)
             # can directly compute without taking log
-            nn.Linear(1000, 2)
+            nn.Linear(self.hidden_units, 2)
         )
 
     def forward(self, z):

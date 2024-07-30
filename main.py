@@ -107,15 +107,19 @@ def train():
                 x_hat = model.decode(z_sampled)
                 assert list(x.shape) == list(x_hat.shape)
                 # conventional VAE losses
-                loss_reconstruct = F.mse_loss(input=x_hat, target=x)
-                loss_latent = -0.5 * torch.mean(1 + log_var - mu.pow(2) - log_var.exp())
+                # for reconstruction loss, original repo uses cross entropy
+                loss_reconstruct = F.binary_cross_entropy(input=x_hat, target=x)
+                loss_latent = -0.5 * (1 + log_var - mu.pow(2) - log_var.exp()).sum(dim=1).mean()
                 # total correlation VAE loss
                 p_logits_discriminator = auxiliary_discriminator(z_sampled)
                 # in one repo it's commented if using discriminator which computes sigmoid
                 # the following loss would change correspondingly, resulting inferior performance
                 loss_kc = torch.mean(p_logits_discriminator[:,0]-p_logits_discriminator[:,1])
                 loss = loss_reconstruct + loss_latent + loss_gamma * loss_kc
-                loss.backward(retain_graph=True) # retain graph for p_logits_discriminator
+                # Previously had retain_graph for p_logits_discriminator
+                # Now that I am re-running the discriminator on the detached latent to get p_logits_discriminator
+                # There shouldn't be need for retain_graph
+                loss.backward() 
                 optimizer.step()
 
                 ### loss for discriminator parameters update ###
@@ -123,8 +127,7 @@ def train():
                 zeros = torch.zeros(x.shape[0], dtype=torch.long, device=device)
                 ones = torch.ones_like(zeros)
                 # compute the original latent encoding and discriminator logits again
-                # with detached latent features to disentangle it from
-                # the above computation graph
+                # with detached latent features to disentangle it from the above computation graph
                 p_logits_discriminator = auxiliary_discriminator(z_sampled.detach())
                 mu_2, log_var_2 = model.encode(x2)
                 z_sampled_2 = model.reparameterize(mu_2, log_var_2)
@@ -133,10 +136,6 @@ def train():
                 loss_discriminator = 0.5*(F.cross_entropy(p_logits_discriminator, zeros)+
                                             F.cross_entropy(p_logits_permed_discriminator, ones))
                 loss_discriminator.backward()
-
-                # update after both loss graphes finish computing, since neural net parameter updates triggered
-                # by the first loss would affect second loss computation and pytorch raises an error
-                
                 optimizer_discriminator.step()
             else:
                 optimizer.zero_grad()
