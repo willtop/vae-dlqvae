@@ -21,9 +21,9 @@ Hyperparameters
 parser.add_argument("--model", type=str, default="vanillavae", choices=['vanillavae', 'factorvae', 'dlqvae'])
 parser.add_argument("--batch_size", type=int, default=64)
 parser.add_argument("--latent_dim", type=int, default=256)
-parser.add_argument("--n_epochs", type=int, default=500)
+parser.add_argument("--n_epochs", type=int, default=150)
 parser.add_argument("--learning_rate", type=float, default=1e-4)
-parser.add_argument("--log_interval", type=int, default=5)
+parser.add_argument("--log_interval", type=int, default=10)
 parser.add_argument("--dataset",  type=str, default='celeba')
 parser.add_argument("--test", action="store_true")
 
@@ -84,7 +84,7 @@ if auxiliary_discriminator:
 def train():
     model.train()
     for i in tqdm(range(1, args.n_epochs+1), desc="training epochs"):
-        for x, x2 in training_loader:
+        for x, x2 in tqdm(training_loader, desc="minibatches within an epoch"):
             x, x2 = x.to(device), x2.to(device)
             if args.model == "vanillavae":
                 optimizer.zero_grad()
@@ -100,7 +100,7 @@ def train():
                 optimizer.step()
             elif args.model == "factorvae":
                 optimizer.zero_grad()
-                loss_gamma = 0#3.2 # value used in the FactorVAE repo
+                loss_gamma = 5 # value used in the FactorVAE repo
                 ### loss for VAE parameters update ###
                 mu, log_var = model.encode(x)
                 z_sampled = model.reparametrize(mu, log_var)
@@ -115,7 +115,8 @@ def train():
                 # in one repo it's commented if using discriminator which computes sigmoid
                 # the following loss would change correspondingly, resulting inferior performance
                 loss_kc = torch.mean(p_logits_discriminator[:,0]-p_logits_discriminator[:,1])
-                loss = loss_reconstruct + loss_latent + loss_gamma * loss_kc
+                anneal_val = utils.linear_annealing(0, 1, i, args.n_epochs)
+                loss = loss_reconstruct + loss_latent + anneal_val * loss_gamma * loss_kc
                 # Previously had retain_graph for p_logits_discriminator
                 # Now that I am re-running the discriminator on the detached latent to get p_logits_discriminator
                 # There shouldn't be need for retain_graph

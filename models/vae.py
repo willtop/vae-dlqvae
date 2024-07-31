@@ -1,7 +1,6 @@
 
 import torch
 import torch.nn as nn
-import torch.nn.init as init
 import numpy as np
 from .vae_constructor import construct_vae_encoder, construct_vae_decoder
 from .building_blocks import LatentQuantizer

@@ -123,7 +123,7 @@ def load_data_and_data_loaders(dataset_name, batch_size):
     elif dataset_name == 'mpi3d':
         training_data, validation_data = load_mpi3d()
     elif dataset_name == 'mpi3d_pairs':
-        training_data, validation_data = load_mpi3d()
+        training_data, validation_data = load_mpi3d(whether_pairs=True)
     else:
         raise ValueError(f'Invalid dataset name: {dataset_name}.')
     training_loader, validation_loader = data_loaders(
@@ -134,6 +134,12 @@ def load_data_and_data_loaders(dataset_name, batch_size):
 def reconstruction_loss(x_hat, x):
     return F.binary_cross_entropy(input=x_hat, target=x)
     return F.mse_loss(input=x_hat, target=x)
+
+def linear_annealing(init_val, final_val, step, total_steps):
+    delta_val = (final_val - init_val)/total_steps
+    annealed_val = init_val + delta_val * step
+    return annealed_val
+
 
 def permute_dims(z):
     assert z.dim() == 2
