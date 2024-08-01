@@ -65,7 +65,7 @@ class FactorVAE(nn.Module):
                             (32, 5, 2, 2, 0), 
                             (64, 3, 2, 1, 1), 
                             (64, 3, 2, 1, 1),
-                            (64, 3, 1, 1, 0)]
+                            (128, 3, 1, 1, 0)]
         self.latent_dim = latent_dim
         # construct encoder module
         (
@@ -75,7 +75,7 @@ class FactorVAE(nn.Module):
             self.encoder_conv_out_size
         ) = construct_vae_encoder(self.conv_params, 
                                   self.latent_dim, 
-                                  512)
+                                  256)
         print(f"Constructed FactorVAE, with output size after encoder convolution layers: {self.conv_params[-1][0]}X{self.encoder_conv_out_size}X{self.encoder_conv_out_size}")
         # construct decoder module
         (
@@ -83,7 +83,7 @@ class FactorVAE(nn.Module):
             self.decoder_conv_lyrs 
         ) = construct_vae_decoder(self.conv_params, 
                                   self.latent_dim, 
-                                  512,
+                                  256,
                                   encoder_conv_out_size=self.encoder_conv_out_size)
 
     def reparametrize(self, mu, log_var):

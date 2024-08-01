@@ -36,7 +36,6 @@ class FactorVAE_Discriminator(nn.Module):
         )
 
     def forward(self, z):
-        # originally had squeeze(), don't think it's needed
         return self.net(z)
 
 class VectorQuantizer(nn.Module):
