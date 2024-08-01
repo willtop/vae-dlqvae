@@ -63,9 +63,9 @@ Set up VQ-VAE model with components defined in ./models/ folder
 
 auxiliary_discriminator, optimizer_discriminator = None, None 
 if args.model == "vanillavae":
-    model = VanillaVAE(args.latent_dim).to(device)
+    model = VAE(args.latent_dim).to(device)
 elif args.model == "factorvae":
-    model = FactorVAE(args.latent_dim).to(device)
+    model = VAE(args.latent_dim).to(device)
     auxiliary_discriminator = FactorVAE_Discriminator(args.latent_dim).to(device)
 else:
     model = DLQVAE(latent_dim_encoder=args.latent_dim,
@@ -101,7 +101,7 @@ def train():
             elif args.model == "factorvae":
                 optimizer.zero_grad()
                 loss_kl_weight = 0.05
-                loss_gamma_weight = 0#5 # value used in the FactorVAE repo
+                loss_gamma_weight = 3.2 # value used in the FactorVAE repo
                 ### loss for VAE parameters update ###
                 mu, log_var = model.encode(x)
                 z_sampled = model.reparametrize(mu, log_var)
@@ -110,14 +110,13 @@ def train():
                 # conventional VAE losses
                 # for reconstruction loss, original repo uses cross entropy
                 loss_reconstruct = utils.reconstruction_loss(x_hat, x)
-                # loss_latent = -0.5 * (1 + log_var - mu.pow(2) - log_var.exp()).sum(dim=1).mean()
-                loss_latent = -0.5 * torch.mean(1 + log_var - mu.pow(2) - log_var.exp())
+                loss_latent = -0.5 * (1 + log_var - mu.pow(2) - log_var.exp()).sum(dim=1).mean()
                 # total correlation VAE loss
                 p_logits_discriminator = auxiliary_discriminator(z_sampled)
                 # in one repo it's commented if using discriminator which computes sigmoid
                 # the following loss would change correspondingly, resulting inferior performance
                 loss_kc = torch.mean(p_logits_discriminator[:,0]-p_logits_discriminator[:,1])
-                anneal_val_kl = utils.linear_annealing(1, 1, i, args.n_epochs)
+                anneal_val_kl = utils.linear_annealing(0, 1, i, int(args.n_epochs/2))
                 anneal_val_gamma = utils.linear_annealing(0, 1, i, args.n_epochs)
                 loss = loss_reconstruct + \
                         anneal_val_kl * loss_kl_weight * loss_latent + \
@@ -129,20 +128,20 @@ def train():
                 optimizer.step()
 
                 ### loss for discriminator parameters update ###
-                # optimizer_discriminator.zero_grad() # this step also clears the above undesired gradients on the discriminator
-                # zeros = torch.zeros(x.shape[0], dtype=torch.long, device=device)
-                # ones = torch.ones_like(zeros)
-                # # compute the original latent encoding and discriminator logits again
-                # # with detached latent features to disentangle it from the above computation graph
-                # p_logits_discriminator = auxiliary_discriminator(z_sampled.detach())
-                # mu_2, log_var_2 = model.encode(x2)
-                # z_sampled_2 = model.reparametrize(mu_2, log_var_2)
-                # z_sampled_2_permed = utils.permute_dims(z_sampled_2).detach()
-                # p_logits_permed_discriminator = auxiliary_discriminator(z_sampled_2_permed)
-                # loss_discriminator = 0.5*(F.cross_entropy(p_logits_discriminator, zeros)+
-                #                             F.cross_entropy(p_logits_permed_discriminator, ones))
-                # loss_discriminator.backward()
-                # optimizer_discriminator.step()
+                optimizer_discriminator.zero_grad() # this step also clears the above undesired gradients on the discriminator
+                zeros = torch.zeros(x.shape[0], dtype=torch.long, device=device)
+                ones = torch.ones_like(zeros)
+                # compute the original latent encoding and discriminator logits again
+                # with detached latent features to disentangle it from the above computation graph
+                p_logits_discriminator = auxiliary_discriminator(z_sampled.detach())
+                mu_2, log_var_2 = model.encode(x2)
+                z_sampled_2 = model.reparametrize(mu_2, log_var_2)
+                z_sampled_2_permed = utils.permute_dims(z_sampled_2).detach()
+                p_logits_permed_discriminator = auxiliary_discriminator(z_sampled_2_permed)
+                loss_discriminator = 0.5*(F.cross_entropy(p_logits_discriminator, zeros)+
+                                            F.cross_entropy(p_logits_permed_discriminator, ones))
+                loss_discriminator.backward()
+                optimizer_discriminator.step()
             else:
                 optimizer.zero_grad()
                 (

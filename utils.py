@@ -94,7 +94,7 @@ def load_mpi3d(whether_pairs=False):
     # note: while this is the same number fo samples as in Diversified metaML setup
     # the exact samples aren't guaranteed to be identical due to shuffled indices 
     meta_train_idxs, meta_valid_idxs = \
-                perm[:300000], perm[300000:]
+                perm[:400000], perm[400000:]
     
     mpi3d_meta_train, mpi3d_meta_valid = \
                 Subset(mpi3d_dataset, meta_train_idxs), \

@@ -80,12 +80,12 @@ def construct_vae_decoder(conv_params, latent_dim, fc_hidden_dim, encoder_conv_o
 # when using a set of convolution layers
 if __name__ == "__main__":
     input_dim = 224
-    conv_params = [(32, 11, 4, 2, 1), 
-                    (32, 5, 2, 2, 0), 
-                    (64, 3, 2, 1, 1), 
-                    (64, 3, 2, 1, 1),
-                    (64, 3, 1, 1, 0)]
-    
+    conv_params = [(96, 11, 4, 2, 1), 
+                    (256, 5, 2, 2, 0), 
+                    (384, 3, 2, 1, 1), 
+                    (384, 3, 2, 1, 1),
+                    (256, 3, 1, 1, 0)]
+
     print("encoder hidden dimensions")
     for _, ks, st, pd, _ in conv_params:
         output_dim = np.floor((input_dim + 2*pd - 1*(ks-1)-1)/st +1)
