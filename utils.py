@@ -132,7 +132,7 @@ def load_data_and_data_loaders(dataset_name, batch_size):
     return training_data, validation_data, training_loader, validation_loader
 
 def reconstruction_loss(x_hat, x):
-    # return F.binary_cross_entropy(input=x_hat, target=x)
+    return F.binary_cross_entropy(input=x_hat, target=x)
     return F.mse_loss(input=x_hat, target=x)
 
 def linear_annealing(init_val, final_val, step, total_steps):

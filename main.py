@@ -21,7 +21,7 @@ Hyperparameters
 parser.add_argument("--model", type=str, default="vanillavae", choices=['vanillavae', 'factorvae', 'dlqvae'])
 parser.add_argument("--batch_size", type=int, default=64)
 parser.add_argument("--latent_dim", type=int, default=256)
-parser.add_argument("--n_epochs", type=int, default=80)
+parser.add_argument("--n_epochs", type=int, default=50)
 parser.add_argument("--learning_rate", type=float, default=1e-4)
 parser.add_argument("--log_interval", type=int, default=5)
 parser.add_argument("--dataset",  type=str, default='celeba')
@@ -95,12 +95,12 @@ def train():
                 # compute losses
                 loss_reconstruct = utils.reconstruction_loss(x_hat, x)
                 loss_latent = -0.5 * torch.mean(1 + log_var - mu.pow(2) - log_var.exp())
-                loss = loss_reconstruct + 0.05 * loss_latent
+                loss = loss_reconstruct + 0.02 * loss_latent
                 loss.backward()
                 optimizer.step()
             elif args.model == "factorvae":
                 optimizer.zero_grad()
-                loss_kl_weight = 0.05
+                loss_kl_weight = 0.02
                 loss_gamma_weight = 3.2 # value used in the FactorVAE repo
                 ### loss for VAE parameters update ###
                 mu, log_var = model.encode(x)
@@ -110,7 +110,7 @@ def train():
                 # conventional VAE losses
                 # for reconstruction loss, original repo uses cross entropy
                 loss_reconstruct = utils.reconstruction_loss(x_hat, x)
-                loss_latent = -0.5 * (1 + log_var - mu.pow(2) - log_var.exp()).sum(dim=1).mean()
+                loss_latent = -0.5 * torch.mean(1 + log_var - mu.pow(2) - log_var.exp())
                 # total correlation VAE loss
                 p_logits_discriminator = auxiliary_discriminator(z_sampled)
                 # in one repo it's commented if using discriminator which computes sigmoid

@@ -9,13 +9,14 @@ from .building_blocks import LatentQuantizer
 class VAE(nn.Module):
     def __init__(self, latent_dim):
         super(VAE, self).__init__()
-        self.conv_params = [(96, 11, 4, 2, 1), 
-                            (256, 5, 2, 2, 0), 
-                            (384, 3, 2, 1, 1), 
-                            (384, 3, 2, 1, 1),
-                            (256, 3, 1, 1, 0)]
+        self.conv_params = [(96, 3, 1, 0, 0), 
+                            (128, 3, 2, 0, 1), 
+                            (256, 5, 2, 1, 1), 
+                            (384, 5, 3, 1, 0),
+                            (256, 5, 3, 1, 0),
+                            (128, 3, 2, 1, 1)]
         self.latent_dim = latent_dim
-        self.fc_hidden_dim = 4096
+        self.fc_hidden_dim = 2048
         # construct encoder module
         (
             self.encoder_conv_lyrs, 
