@@ -10,9 +10,9 @@ class VAE(nn.Module):
     def __init__(self, latent_dim):
         super(VAE, self).__init__()
         self.conv_params = [(96, 3, 1, 0, 0), 
-                            (128, 3, 2, 0, 1), 
+                            (128, 3, 1, 0, 0), 
                             (256, 5, 2, 1, 1), 
-                            (384, 5, 3, 1, 0),
+                            (384, 5, 2, 1, 0),
                             (256, 5, 3, 1, 0),
                             (128, 3, 2, 1, 1)]
         self.latent_dim = latent_dim

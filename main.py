@@ -21,7 +21,7 @@ Hyperparameters
 parser.add_argument("--model", type=str, default="vanillavae", choices=['vanillavae', 'factorvae', 'dlqvae'])
 parser.add_argument("--batch_size", type=int, default=64)
 parser.add_argument("--latent_dim", type=int, default=256)
-parser.add_argument("--n_epochs", type=int, default=50)
+parser.add_argument("--n_epochs", type=int, default=70)
 parser.add_argument("--learning_rate", type=float, default=1e-4)
 parser.add_argument("--log_interval", type=int, default=5)
 parser.add_argument("--dataset",  type=str, default='celeba')
@@ -36,6 +36,7 @@ if args.model == "factorvae":
     assert args.dataset.endswith("pairs")
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print("Using device: ", device)
 
 # add in the dataset to the filename
 os.makedirs(os.path.join(

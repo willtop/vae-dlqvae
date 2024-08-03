@@ -81,9 +81,9 @@ def construct_vae_decoder(conv_params, latent_dim, fc_hidden_dim, encoder_conv_o
 if __name__ == "__main__":
     input_dim = 224
     conv_params = [(96, 3, 1, 0, 0), 
-                    (128, 3, 2, 0, 1), 
+                    (128, 3, 1, 0, 0), 
                     (256, 5, 2, 1, 1), 
-                    (384, 5, 3, 1, 0),
+                    (384, 5, 2, 1, 0),
                     (256, 5, 3, 1, 0),
                     (128, 3, 2, 1, 1)]
 
