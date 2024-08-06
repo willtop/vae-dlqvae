@@ -26,7 +26,7 @@ class VAE(nn.Module):
         ) = construct_vae_encoder(self.conv_params, 
                                   self.latent_dim, 
                                   self.fc_hidden_dim)
-        print(f"Constructed FactorVAE, with output size after encoder convolution layers: {self.conv_params[-1][0]}X{self.encoder_conv_out_size}X{self.encoder_conv_out_size}")
+        print(f"Constructed VAE, with output size after encoder convolution layers: {self.conv_params[-1][0]}X{self.encoder_conv_out_size}X{self.encoder_conv_out_size}")
         # construct decoder module
         (
             self.decoder_fc,
@@ -59,6 +59,31 @@ class VAE(nn.Module):
         z_sampled = torch.randn(n_samples, self.latent_dim).to(device)
         x_sampled = self.decode(z_sampled)
         return x_sampled
+
+class FactorVAE(VAE):
+    def __init__(self, latent_dim):
+        super(FactorVAE, self).__init__(latent_dim)
+        print("Constructed FactorVAE based on VAE!")
+
+    def sample_traversed_latent(self, n_latent_dims_to_traverse, device):
+        traverse_vals = torch.arange(-2, 2.1, step=0.5)
+        n_traverse_vals = traverse_vals.size(dim=0)
+        assert n_latent_dims_to_traverse <= self.latent_dim
+        self.eval()
+        latent_dims_traversed = np.random.choice(np.arange(self.latent_dim), 
+                                                 size=n_latent_dims_to_traverse,
+                                                 replace=False)
+        z_sampled_base = torch.randn(self.latent_dim).to(device)
+        z_sampled_all = []
+        for latent_dim in latent_dims_traversed:
+            for latent_val in traverse_vals:
+                z_sampled = z_sampled_base.clone()
+                z_sampled[latent_dim] = latent_val
+                z_sampled_all.append(z_sampled)
+        z_sampled_all = torch.stack(z_sampled_all, dim=0).to(device)
+        assert z_sampled_all.shape == (n_latent_dims_to_traverse * n_traverse_vals, self.latent_dim)
+        x_sampled = self.decode(z_sampled_all)
+        return x_sampled, n_traverse_vals
 
 
 class DLQVAE(nn.Module):
@@ -159,7 +184,7 @@ class DLQVAE(nn.Module):
         z_sampled_all = torch.stack(z_sampled_all, dim=0).to(device)
         assert z_sampled_all.shape == (n_latent_dims_to_traverse * self.levels_per_dim, self.latent_dim_quant)
         x_sampled = self.decode(z_sampled_all)
-        return x_sampled
+        return x_sampled, self.levels_per_dim
 
 
     def inspect_learned_codebook(self):

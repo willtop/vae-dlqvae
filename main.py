@@ -66,7 +66,7 @@ auxiliary_discriminator, optimizer_discriminator = None, None
 if args.model == "vanillavae":
     model = VAE(args.latent_dim).to(device)
 elif args.model == "factorvae":
-    model = VAE(args.latent_dim).to(device)
+    model = FactorVAE(args.latent_dim).to(device)
     auxiliary_discriminator = FactorVAE_Discriminator(args.latent_dim).to(device)
 else:
     model = DLQVAE(latent_dim_encoder=args.latent_dim,
@@ -220,9 +220,9 @@ def generate():
     with torch.no_grad():
         x_sampled = model.sample_random_latent(81, device).cpu()
         save_image(x_sampled, f"results/gen_samples_{args.model}_{args.dataset}.png", nrow=9)
-        if args.model == "dlqvae":
-            x_sampled = model.sample_traversed_latent(12, device).cpu()
-            save_image(x_sampled, f"results/gen_samples_traverseLatent_{args.model}_{args.dataset}.png", nrow=model.levels_per_dim)
+        if args.model in ["factorvae", "dlqvae"]:
+            x_sampled, n_traverse_vals = model.sample_traversed_latent(64, device)
+            save_image(x_sampled.cpu(), f"results/gen_samples_traverseLatent_{args.model}_{args.dataset}.png", nrow=n_traverse_vals)
     return
 
 if __name__ == "__main__":
