@@ -21,7 +21,7 @@ Hyperparameters
 parser.add_argument("--model", type=str, default="vanillavae", choices=['vanillavae', 'factorvae', 'dlqvae'])
 parser.add_argument("--batch_size", type=int, default=64)
 parser.add_argument("--latent_dim", type=int, default=256)
-parser.add_argument("--n_epochs", type=int, default=70)
+parser.add_argument("--n_epochs", type=int, default=30)
 parser.add_argument("--learning_rate", type=float, default=1e-4)
 parser.add_argument("--log_interval", type=int, default=5)
 parser.add_argument("--dataset",  type=str, default='celeba')
@@ -102,7 +102,7 @@ def train():
             elif args.model == "factorvae":
                 optimizer.zero_grad()
                 loss_kl_weight = 0.02
-                loss_gamma_weight = 3.2 # value used in the FactorVAE repo
+                loss_gamma_weight = 5 # value used in the FactorVAE repo
                 ### loss for VAE parameters update ###
                 mu, log_var = model.encode(x)
                 z_sampled = model.reparametrize(mu, log_var)
@@ -221,7 +221,7 @@ def generate():
         x_sampled = model.sample_random_latent(81, device).cpu()
         save_image(x_sampled, f"results/gen_samples_{args.model}_{args.dataset}.png", nrow=9)
         if args.model in ["factorvae", "dlqvae"]:
-            x_sampled, n_traverse_vals = model.sample_traversed_latent(64, device)
+            x_sampled, n_traverse_vals = model.sample_traversed_latent(32, device)
             save_image(x_sampled.cpu(), f"results/gen_samples_traverseLatent_{args.model}_{args.dataset}.png", nrow=n_traverse_vals)
     return
 
