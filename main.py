@@ -21,14 +21,22 @@ Hyperparameters
 parser.add_argument("--model", type=str, default="vanillavae", choices=['vanillavae', 'factorvae', 'dlqvae'])
 parser.add_argument("--batch_size", type=int, default=64)
 parser.add_argument("--latent_dim", type=int, default=256)
-parser.add_argument("--n_epochs", type=int, default=30)
+parser.add_argument("--n_epochs", type=int, default=50)
 parser.add_argument("--learning_rate", type=float, default=1e-4)
 parser.add_argument("--log_interval", type=int, default=5)
-parser.add_argument("--dataset",  type=str, default='celeba')
+parser.add_argument("--dataset",  type=str, default='celeba', choices=['celeba', 'mpi3d', 'mpi3d_pairs'])
 parser.add_argument("--test", action="store_true")
 
 
 args = parser.parse_args()
+
+if args.dataset == "celeba":
+    args.img_size = 224
+elif args.dataset in ["mpi3d", "mpi3d_pairs"]:
+    args.img_size = 64
+else:
+    print("not supported!")
+    exit(1)
 
 # for factorVAE, due to the training of discriminator, has to have a pair of images
 # returned from the dataloader, reflected in this code base by the dataset name
@@ -38,11 +46,9 @@ if args.model == "factorvae":
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using device: ", device)
 
-# add in the dataset to the filename
 os.makedirs(os.path.join(
                     os.path.dirname(os.path.realpath(__file__)), 
                     "results"), exist_ok=True)
-    
 model_filepath = os.path.join(
                     os.path.dirname(os.path.realpath(__file__)), 
                     "results", 
@@ -57,22 +63,22 @@ Load data and define batch data loaders
     validation_data, 
     training_loader, 
     validation_loader
-) = utils.load_data_and_data_loaders(args.dataset, args.batch_size)
+) = utils.load_data_and_data_loaders(args)
 """
 Set up VQ-VAE model with components defined in ./models/ folder
 """
 
 auxiliary_discriminator, optimizer_discriminator = None, None 
 if args.model == "vanillavae":
-    model = VAE(args.latent_dim).to(device)
+    model = VAE(args.latent_dim, args.img_size).to(device)
 elif args.model == "factorvae":
-    model = FactorVAE(args.latent_dim).to(device)
+    model = FactorVAE(args.latent_dim, args.img_size).to(device)
     auxiliary_discriminator = FactorVAE_Discriminator(args.latent_dim).to(device)
 else:
     model = DLQVAE(latent_dim_encoder=args.latent_dim,
                    latent_dim_quant=50,
-                   levels_per_dim=4
-                   ).to(device)
+                   levels_per_dim=4,
+                   img_size=args.img_size).to(device)
 
 """
 Set up optimizer and training loop

@@ -7,17 +7,18 @@ from .building_blocks import LatentQuantizer
     
 
 class VAE(nn.Module):
-    def __init__(self, latent_dim):
+    def __init__(self, latent_dim, img_size):
         super(VAE, self).__init__()
-        self.conv_params = [(32, 3, 1, 0, 0), 
+        self.conv_params = [(32, 2, 1, 0, 0), 
                             (64, 3, 1, 0, 0), 
                             (128, 3, 1, 0, 0), 
-                            (256, 5, 2, 1, 1),
-                            (128, 5, 2, 1, 1),
+                            (256, 4, 1, 1, 0),
+                            (128, 4, 2, 1, 0),
                             (64, 3, 2, 1, 0),
                             (64, 3, 2, 1, 0)]
         self.latent_dim = latent_dim
-        self.fc_hidden_dim = 512
+        self.img_size = img_size
+        self.fc_hidden_dim = 256
         # construct encoder module
         (
             self.encoder_conv_lyrs, 
@@ -26,7 +27,8 @@ class VAE(nn.Module):
             self.encoder_conv_out_size
         ) = construct_vae_encoder(self.conv_params, 
                                   self.latent_dim, 
-                                  self.fc_hidden_dim)
+                                  self.fc_hidden_dim,
+                                  self.img_size)
         print(f"Constructed VAE, with output size after encoder convolution layers: {self.conv_params[-1][0]}X{self.encoder_conv_out_size}X{self.encoder_conv_out_size}")
         # construct decoder module
         (
@@ -62,8 +64,8 @@ class VAE(nn.Module):
         return x_sampled
 
 class FactorVAE(VAE):
-    def __init__(self, latent_dim):
-        super(FactorVAE, self).__init__(latent_dim)
+    def __init__(self, latent_dim, img_size):
+        super(FactorVAE, self).__init__(latent_dim, img_size)
         print("Constructed FactorVAE based on VAE!")
 
     def sample_traversed_latent(self, n_latent_dims_to_traverse, device):
@@ -88,7 +90,7 @@ class FactorVAE(VAE):
 
 
 class DLQVAE(nn.Module):
-    def __init__(self, latent_dim_encoder, latent_dim_quant, levels_per_dim):
+    def __init__(self, latent_dim_encoder, latent_dim_quant, levels_per_dim, img_size):
         super(DLQVAE, self).__init__()
         self.conv_params = [(64, 3, 1, 0, 0), 
                             (128, 3, 2, 0, 1), 
@@ -101,13 +103,14 @@ class DLQVAE(nn.Module):
         self.latent_dim_quant = latent_dim_quant
         # number of levels per dimension in the latent space to be quantized
         self.levels_per_dim = levels_per_dim
+        self.img_size = img_size
         # construct encoder module
         (
             self.encoder_conv_lyrs, 
             self.encoder_fc_mu,
             _, # don't need the variation prediction layer
             self.encoder_conv_out_size
-        ) = construct_vae_encoder(self.conv_params, self.latent_dim_encoder, 256)
+        ) = construct_vae_encoder(self.conv_params, self.latent_dim_encoder, 256, self.img_size)
         print(f"Constructed DLQVAE, with output size after encoder convolution layers: {self.conv_params[-1][0]}X{self.encoder_conv_out_size}X{self.encoder_conv_out_size}")
         if self.latent_dim_quant != self.latent_dim_encoder:
             self.fc_encoder_to_quant = nn.Linear(self.latent_dim_encoder, self.latent_dim_quant)

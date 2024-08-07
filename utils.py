@@ -7,6 +7,7 @@ from torch.utils.data import Dataset, Subset, DataLoader
 import os
 import numpy as np
 
+
 class MPI3D(Dataset):
     def __init__(self, imgs, transforms):
         self.imgs = imgs
@@ -34,7 +35,8 @@ class MPI3D_Pairs(Dataset):
         return (self.transforms(img1), self.transforms(img2))
 
 # newly added loader for celebA
-def load_celeba():
+def load_celeba(args):
+    assert args.img_size == 224
     data_transforms = transforms.Compose([
         transforms.ToTensor(),
         transforms.Resize(256),
@@ -53,7 +55,7 @@ def load_celeba():
                           download=True)
     return train, val
 
-def load_cifar():
+def load_cifar(args):
     train = datasets.CIFAR10(root="data", train=True, download=True,
                              transform=transforms.Compose([
                                  transforms.ToTensor(),
@@ -69,10 +71,10 @@ def load_cifar():
                            ]))
     return train, val
 
-def load_mpi3d(whether_pairs=False):
+def load_mpi3d(args, whether_pairs=False):
+    assert args.img_size == 64
     data_transforms = transforms.Compose([
-         transforms.ToTensor(),
-         transforms.Resize((224,224))
+         transforms.ToTensor()
     ])
     datafile_path = os.path.join("data", "real3d_complicated_shapes_ordered.npz")
     print(f"Loading mpi3d data from {datafile_path}...")
@@ -115,19 +117,19 @@ def data_loaders(train_data, val_data, batch_size):
     return train_loader, val_loader
 
 
-def load_data_and_data_loaders(dataset_name, batch_size):
-    if dataset_name == 'cifar10':
-        training_data, validation_data = load_cifar()
-    elif dataset_name == 'celeba':
-        training_data, validation_data = load_celeba()
-    elif dataset_name == 'mpi3d':
-        training_data, validation_data = load_mpi3d()
-    elif dataset_name == 'mpi3d_pairs':
-        training_data, validation_data = load_mpi3d(whether_pairs=True)
+def load_data_and_data_loaders(args):
+    if args.dataset == 'cifar10':
+        training_data, validation_data = load_cifar(args)
+    elif args.dataset == 'celeba':
+        training_data, validation_data = load_celeba(args)
+    elif args.dataset == 'mpi3d':
+        training_data, validation_data = load_mpi3d(args)
+    elif args.dataset == 'mpi3d_pairs':
+        training_data, validation_data = load_mpi3d(args, whether_pairs=True)
     else:
-        raise ValueError(f'Invalid dataset name: {dataset_name}.')
+        raise ValueError(f'Invalid dataset name: {args.dataset}.')
     training_loader, validation_loader = data_loaders(
-            training_data, validation_data, batch_size)
+            training_data, validation_data, args.batch_size)
 
     return training_data, validation_data, training_loader, validation_loader
 

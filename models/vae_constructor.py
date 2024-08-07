@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 
 
-def construct_vae_encoder(conv_params, latent_dim, fc_hidden_dim):
+def construct_vae_encoder(conv_params, latent_dim, fc_hidden_dim, img_size):
     in_dim = 3 
     encoder_conv_list = []
     for (n_chnl, kn_size, strd, pad, _) in conv_params:
@@ -22,7 +22,7 @@ def construct_vae_encoder(conv_params, latent_dim, fc_hidden_dim):
     encoder_conv_lyrs = nn.Sequential(*encoder_conv_list)
     # throw in a pseudo 224X224 image (same as preprocessed celebA) 
     # to see the convolution layers output size
-    dummy_out = encoder_conv_lyrs(torch.rand(1, 3, 224, 224))
+    dummy_out = encoder_conv_lyrs(torch.rand(1, 3, img_size, img_size))
     conv_out_size = dummy_out.shape[2]
     # add in flattened fully connected layers
     encoder_fc_mu = nn.Sequential(
@@ -79,12 +79,12 @@ def construct_vae_decoder(conv_params, latent_dim, fc_hidden_dim, encoder_conv_o
 # The following code is just for verifying the dimensions 
 # when using a set of convolution layers
 if __name__ == "__main__":
-    input_dim = 224
-    conv_params = [(32, 3, 1, 0, 0), 
+    input_dim = 64
+    conv_params = [(32, 2, 1, 0, 0), 
                    (64, 3, 1, 0, 0), 
                    (128, 3, 1, 0, 0), 
-                   (256, 5, 2, 1, 1),
-                   (128, 5, 2, 1, 1),
+                   (256, 4, 1, 1, 0),
+                   (128, 4, 2, 1, 0),
                    (64, 3, 2, 1, 0),
                    (64, 3, 2, 1, 0)]
 
