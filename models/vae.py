@@ -67,25 +67,23 @@ class FactorVAE(VAE):
         super(FactorVAE, self).__init__(latent_dim, img_size)
         print("Constructed FactorVAE based on VAE!")
 
-    def sample_traversed_latent(self, rand_img, n_latent_dims_to_traverse, device):
+    def sample_traversed_latent(self, rand_img, device):
         traverse_vals = torch.arange(-2, 2.1, step=0.5)
-        n_traverse_vals = traverse_vals.size(dim=0)
-        assert n_latent_dims_to_traverse <= self.latent_dim
+        n_vals_traversed = traverse_vals.size(dim=0)
         self.eval()
-        latent_dims_traversed = np.random.choice(np.arange(self.latent_dim), 
-                                                 size=n_latent_dims_to_traverse,
-                                                 replace=False)
-        z_sampled_base, _ = self.encode(rand_img.unsqueeze(0).to(device)).squeeze(0)
+        
+        z_sampled_base, _ = self.encode(rand_img.unsqueeze(0).to(device))
+        z_sampled_base = z_sampled_base.squeeze(0)
         z_sampled_all = []
-        for latent_dim in latent_dims_traversed:
+        for latent_dim_idx in range(self.latent_dim):
             for latent_val in traverse_vals:
                 z_sampled = z_sampled_base.clone()
-                z_sampled[latent_dim] = latent_val
+                z_sampled[latent_dim_idx] = latent_val
                 z_sampled_all.append(z_sampled)
         z_sampled_all = torch.stack(z_sampled_all, dim=0).to(device)
-        assert z_sampled_all.shape == (n_latent_dims_to_traverse * n_traverse_vals, self.latent_dim)
+        assert z_sampled_all.shape == (self.latent_dim * n_vals_traversed, self.latent_dim)
         x_sampled = self.decode(z_sampled_all)
-        return x_sampled, n_traverse_vals
+        return x_sampled, n_vals_traversed
 
 
 class DLQVAE(nn.Module):
@@ -166,18 +164,15 @@ class DLQVAE(nn.Module):
         x_sampled = self.decode(z_sampled)
         return x_sampled
     
-    def sample_traversed_latent(self, n_latent_dims_to_traverse, device):
-        assert n_latent_dims_to_traverse <= self.latent_dim_quant
+    def sample_traversed_latent(self, rand_img, device):
         self.eval()
-        latent_dims_traversed = np.random.choice(np.arange(self.latent_dim_quant), 
-                                                 size=n_latent_dims_to_traverse,
-                                                 replace=False)
-        z_sampled_base = torch.tensor([
-            self.vector_quantizer.values_per_latent[i][
-                torch.randint(high=self.levels_per_dim, size=(1,))]
-                    for i in range(self.latent_dim_quant)])
+        
+        z, _ = self.encode(rand_img.unsqueeze(0).to(device))
+        (z_q, _, _, _) = self.vector_quantizer(z)
+        z_sampled_base = z_q.squeeze(0)
+
         z_sampled_all = []
-        for latent_dim in latent_dims_traversed:
+        for latent_dim in range(self.latent_dim_quant):
             for latent_val in self.vector_quantizer.values_per_latent[latent_dim]:
                 z_sampled = z_sampled_base.clone()
                 # latent_val is a tensor with a single value, nonetheless can directly assign it 
@@ -185,7 +180,7 @@ class DLQVAE(nn.Module):
                 z_sampled[latent_dim] = latent_val
                 z_sampled_all.append(z_sampled)
         z_sampled_all = torch.stack(z_sampled_all, dim=0).to(device)
-        assert z_sampled_all.shape == (n_latent_dims_to_traverse * self.levels_per_dim, self.latent_dim_quant)
+        assert z_sampled_all.shape == (self.latent_dim_quant * self.levels_per_dim, self.latent_dim_quant)
         x_sampled = self.decode(z_sampled_all)
         return x_sampled, self.levels_per_dim
 
