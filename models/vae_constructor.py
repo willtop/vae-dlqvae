@@ -81,12 +81,11 @@ def construct_vae_decoder(conv_params, latent_dim, fc_hidden_dim, encoder_conv_o
 if __name__ == "__main__":
     input_dim = 64
     conv_params = [(32, 2, 1, 0, 0), 
-                   (64, 3, 1, 0, 0), 
-                   (128, 3, 1, 0, 0), 
-                   (256, 4, 1, 1, 0),
-                   (128, 4, 2, 1, 0),
-                   (64, 3, 2, 1, 0),
-                   (64, 3, 2, 1, 0)]
+                    (64, 3, 1, 0, 0), 
+                    (128, 3, 1, 0, 0), 
+                    (256, 4, 1, 1, 0),
+                    (128, 4, 2, 1, 0),
+                    (64, 4, 2, 1, 1)]
 
     print("encoder hidden dimensions")
     for _, ks, st, pd, _ in conv_params:

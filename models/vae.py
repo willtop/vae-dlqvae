@@ -14,8 +14,7 @@ class VAE(nn.Module):
                             (128, 3, 1, 0, 0), 
                             (256, 4, 1, 1, 0),
                             (128, 4, 2, 1, 0),
-                            (64, 3, 2, 1, 0),
-                            (64, 3, 2, 1, 0)]
+                            (64, 4, 2, 1, 1)]
         self.latent_dim = latent_dim
         self.img_size = img_size
         self.fc_hidden_dim = 256
