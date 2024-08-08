@@ -227,8 +227,17 @@ def generate():
         x_sampled = model.sample_random_latent(81, device).cpu()
         save_image(x_sampled, f"results/gen_samples_{args.model}_{args.dataset}.png", nrow=9)
         if args.model in ["factorvae", "dlqvae"]:
-            x_sampled, n_traverse_vals = model.sample_traversed_latent(30, device)
-            save_image(x_sampled.cpu(), f"results/gen_samples_traverseLatent_{args.model}_{args.dataset}.png", nrow=n_traverse_vals)
+            n_dims_traverse = 25
+            n_base_imgs = 3
+            x_sampled_all = []
+            for i in range(n_base_imgs):
+                rand_img_idx = np.random.randint(len(validation_data))
+                rand_img, _ = validation_data[rand_img_idx]
+                x_sampled, n_traverse_vals = model.sample_traversed_latent(rand_img, n_dims_traverse, device)
+                x_sampled_all.append(x_sampled.view(n_dims_traverse, n_traverse_vals, 3, args.img_size, args.img_size))
+            torch.concat(x_sampled_all, dim=1)
+            assert x_sampled_all.shape == (n_dims_traverse, n_traverse_vals*n_base_imgs, 3, args.img_size, args.img_size)
+            save_image(x_sampled.view(-1, 3, args.img_size, args.img_size).cpu(), f"results/gen_samples_traverseLatent_{args.model}_{args.dataset}.png", nrow=n_traverse_vals*n_base_imgs)
     return
 
 if __name__ == "__main__":

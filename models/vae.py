@@ -67,7 +67,7 @@ class FactorVAE(VAE):
         super(FactorVAE, self).__init__(latent_dim, img_size)
         print("Constructed FactorVAE based on VAE!")
 
-    def sample_traversed_latent(self, n_latent_dims_to_traverse, device):
+    def sample_traversed_latent(self, rand_img, n_latent_dims_to_traverse, device):
         traverse_vals = torch.arange(-2, 2.1, step=0.5)
         n_traverse_vals = traverse_vals.size(dim=0)
         assert n_latent_dims_to_traverse <= self.latent_dim
@@ -75,7 +75,7 @@ class FactorVAE(VAE):
         latent_dims_traversed = np.random.choice(np.arange(self.latent_dim), 
                                                  size=n_latent_dims_to_traverse,
                                                  replace=False)
-        z_sampled_base = torch.randn(self.latent_dim).to(device)
+        z_sampled_base, _ = self.encode(rand_img.unsqueeze(0).to(device)).squeeze(0)
         z_sampled_all = []
         for latent_dim in latent_dims_traversed:
             for latent_val in traverse_vals:
