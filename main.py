@@ -18,14 +18,16 @@ parser = argparse.ArgumentParser()
 Hyperparameters
 """
 
-parser.add_argument("--model", type=str, default="vanillavae", choices=['vanillavae', 'factorvae', 'dlqvae'])
+parser.add_argument("--model", type=str, default="vanillavae", 
+                    choices=['vanillavae', 'factorvae', 'dlqvae'])
 parser.add_argument("--batch_size", type=int, default=64)
 parser.add_argument("--latent_dim", type=int, default=256)
-parser.add_argument("--n_epochs", type=int, default=100)
+parser.add_argument("--n_epochs", type=int, default=60)
 parser.add_argument("--learning_rate", type=float, default=1e-4)
 parser.add_argument("--learning_rate_discriminator", type=float, default=1e-5)
 parser.add_argument("--log_interval", type=int, default=5)
-parser.add_argument("--dataset",  type=str, default='celeba', choices=['celeba', 'mpi3d', 'mpi3d_pairs'])
+parser.add_argument("--dataset",  type=str, default='celeba', 
+                    choices=['celeba', 'mpi3d_toy', 'mpi3d_toy_pairs', 'mpi3d_complex', 'mpi3d_complex_pairs'])
 parser.add_argument("--test", action="store_true")
 
 
@@ -33,7 +35,7 @@ args = parser.parse_args()
 
 if args.dataset == "celeba":
     args.img_size = 224
-elif args.dataset in ["mpi3d", "mpi3d_pairs"]:
+elif args.dataset.startswith("mpi3d"):
     args.img_size = 64
 else:
     print("not supported!")
@@ -124,10 +126,9 @@ def train():
                 # in one repo it's commented if using discriminator which computes sigmoid
                 # the following loss would change correspondingly, resulting inferior performance
                 loss_kc = torch.mean(p_logits_discriminator[:,0]-p_logits_discriminator[:,1])
-                anneal_val_kl = utils.linear_annealing(1, 1, i, int(args.n_epochs/2))
                 anneal_val_gamma = utils.linear_annealing(0, 1, i, int(args.n_epochs/2))
                 loss = loss_reconstruct + \
-                        anneal_val_kl * loss_kl_weight * loss_latent + \
+                        loss_kl_weight * loss_latent + \
                             anneal_val_gamma * loss_gamma_weight * loss_kc
                 # Previously had retain_graph for p_logits_discriminator
                 # Now that I am re-running the discriminator on the detached latent to get p_logits_discriminator

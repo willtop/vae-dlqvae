@@ -71,17 +71,31 @@ def load_cifar(args):
                            ]))
     return train, val
 
-def load_mpi3d(args, whether_pairs=False):
+def load_mpi3d(args, ds_type, whether_pairs=False):
     assert args.img_size == 64
     data_transforms = transforms.Compose([
          transforms.ToTensor()
     ])
-    datafile_path = os.path.join("data", "real3d_complicated_shapes_ordered.npz")
-    print(f"Loading mpi3d data from {datafile_path}...")
+    if ds_type == "toy":
+        datafile_path = os.path.join("data", "mpi3d_toy.npz")
+    elif ds_type == "complex":
+        datafile_path = os.path.join("data", "real3d_complicated_shapes_ordered.npz")
+    else:
+        print("MPI3D unsupported type: ", ds_type)
+        exit(1)
+    print(f"Loading mpi3d {ds_type} data from {datafile_path}...")
 
     mpi3d_data = np.load(datafile_path)['images']
     n_imgs = mpi3d_data.shape[0]
-    assert n_imgs == 460800
+    if ds_type == "toy":
+        assert n_imgs == 1_036_800
+        n_train_imgs = 1_000_000
+    elif ds_type == "complex":
+        assert n_imgs == 460_800
+        n_train_imgs = 400_000
+    else:
+        print("MPI3D unsupported type: ", ds_type)
+        exit(1)
 
     if whether_pairs:
         mpi3d_dataset = MPI3D_Pairs(mpi3d_data, data_transforms)
@@ -92,11 +106,11 @@ def load_mpi3d(args, whether_pairs=False):
     # get meta split indices
     perm = np.arange(n_imgs)
     np.random.shuffle(perm)
-    # use 300K for training the encoder
+    # use a certain number of samples for training the encoder
     # note: while this is the same number fo samples as in Diversified metaML setup
     # the exact samples aren't guaranteed to be identical due to shuffled indices 
     meta_train_idxs, meta_valid_idxs = \
-                perm[:400000], perm[400000:]
+                perm[:n_train_imgs], perm[n_train_imgs:]
     
     mpi3d_meta_train, mpi3d_meta_valid = \
                 Subset(mpi3d_dataset, meta_train_idxs), \
@@ -122,10 +136,14 @@ def load_data_and_data_loaders(args):
         training_data, validation_data = load_cifar(args)
     elif args.dataset == 'celeba':
         training_data, validation_data = load_celeba(args)
-    elif args.dataset == 'mpi3d':
-        training_data, validation_data = load_mpi3d(args)
-    elif args.dataset == 'mpi3d_pairs':
-        training_data, validation_data = load_mpi3d(args, whether_pairs=True)
+    elif args.dataset == 'mpi3d_toy':
+        training_data, validation_data = load_mpi3d(args, ds_type="toy")
+    elif args.dataset == 'mpi3d_toy_pairs':
+        training_data, validation_data = load_mpi3d(args, ds_type="toy", whether_pairs=True)
+    elif args.dataset == 'mpi3d_complex':
+        training_data, validation_data = load_mpi3d(args, ds_type="complex")
+    elif args.dataset == 'mpi3d_complex_pairs':
+        training_data, validation_data = load_mpi3d(args, ds_type="complex", whether_pairs=True)
     else:
         raise ValueError(f'Invalid dataset name: {args.dataset}.')
     training_loader, validation_loader = data_loaders(
