@@ -6,9 +6,10 @@ import torchvision.transforms as transforms
 from torch.utils.data import Dataset, Subset, DataLoader
 import os
 import numpy as np
+import h5py
 
 
-class MPI3D(Dataset):
+class Custom_Dataset(Dataset):
     def __init__(self, imgs, transforms):
         self.imgs = imgs
         self.transforms = transforms
@@ -20,7 +21,7 @@ class MPI3D(Dataset):
         return (self.transforms(self.imgs[index]), torch.tensor(0))
     
 # for FactorVAE training
-class MPI3D_Pairs(Dataset):
+class Custom_Dataset_Pairs(Dataset):
     def __init__(self, imgs, transforms):
         self.imgs = imgs
         self.transforms = transforms
@@ -98,9 +99,9 @@ def load_mpi3d(args, ds_type, whether_pairs=False):
         exit(1)
 
     if whether_pairs:
-        mpi3d_dataset = MPI3D_Pairs(mpi3d_data, data_transforms)
+        mpi3d_dataset = Custom_Dataset_Pairs(mpi3d_data, data_transforms)
     else:
-        mpi3d_dataset = MPI3D(mpi3d_data, data_transforms)
+        mpi3d_dataset = Custom_Dataset(mpi3d_data, data_transforms)
     
     print("[MPI3D] Getting meta splits.....")
     # get meta split indices
@@ -117,6 +118,42 @@ def load_mpi3d(args, ds_type, whether_pairs=False):
                 Subset(mpi3d_dataset, meta_valid_idxs)
     
     return mpi3d_meta_train, mpi3d_meta_valid
+
+def load_shapes3d(args, whether_pairs=False):
+    assert args.img_size == 64
+    data_transforms = transforms.Compose([
+         transforms.ToTensor()
+    ])
+    datafile_path = os.path.join("data", "shapes3d.h5")
+
+    print(f"Loading shapes3d data from {datafile_path}...")
+
+    shapes3d_data = h5py.File(datafile_path, 'r')
+    shapes3d_imgs = shapes3d_data['images'][()]
+    n_imgs = shapes3d_imgs.shape[0]
+    assert n_imgs == 480_000
+    n_train_imgs = 400_000
+
+    if whether_pairs:
+        shapes3d_dataset = Custom_Dataset_Pairs(shapes3d_imgs, data_transforms)
+    else:
+        shapes3d_dataset = Custom_Dataset(shapes3d_imgs, data_transforms)
+    
+    print("[Shapes3D] Getting meta splits.....")
+    # get meta split indices
+    perm = np.arange(n_imgs)
+    np.random.shuffle(perm)
+    # use a certain number of samples for training the encoder
+    # note: while this is the same number fo samples as in Diversified metaML setup
+    # the exact samples aren't guaranteed to be identical due to shuffled indices 
+    meta_train_idxs, meta_valid_idxs = \
+                perm[:n_train_imgs], perm[n_train_imgs:]
+    
+    shapes3d_meta_train, shapes3d_meta_valid = \
+                Subset(shapes3d_dataset, meta_train_idxs), \
+                Subset(shapes3d_dataset, meta_valid_idxs)
+    
+    return shapes3d_meta_train, shapes3d_meta_valid
 
 
 def data_loaders(train_data, val_data, batch_size):
@@ -144,6 +181,10 @@ def load_data_and_data_loaders(args):
         training_data, validation_data = load_mpi3d(args, ds_type="complex")
     elif args.dataset == 'mpi3d_complex_pairs':
         training_data, validation_data = load_mpi3d(args, ds_type="complex", whether_pairs=True)
+    elif args.dataset == "shapes3d":
+        training_data, validation_data = load_shapes3d(args)    
+    elif args.dataset == "shapes3d_pairs":
+        training_data, validation_data = load_shapes3d(args, whether_pairs=True)
     else:
         raise ValueError(f'Invalid dataset name: {args.dataset}.')
     training_loader, validation_loader = data_loaders(

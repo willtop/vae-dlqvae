@@ -27,7 +27,7 @@ parser.add_argument("--learning_rate", type=float, default=1e-4)
 parser.add_argument("--learning_rate_discriminator", type=float, default=1e-5)
 parser.add_argument("--log_interval", type=int, default=5)
 parser.add_argument("--dataset",  type=str, default='celeba', 
-                    choices=['celeba', 'mpi3d_toy', 'mpi3d_toy_pairs', 'mpi3d_complex', 'mpi3d_complex_pairs'])
+                    choices=['celeba', 'mpi3d_toy', 'mpi3d_complex', 'shapes3d'])
 parser.add_argument("--test", action="store_true")
 
 
@@ -37,6 +37,8 @@ if args.dataset == "celeba":
     args.img_size = 224
 elif args.dataset.startswith("mpi3d"):
     args.img_size = 64
+elif args.dataset == "shapes3d":
+    args.img_size = 64
 else:
     print("not supported!")
     exit(1)
@@ -44,7 +46,7 @@ else:
 # for factorVAE, due to the training of discriminator, has to have a pair of images
 # returned from the dataloader, reflected in this code base by the dataset name
 if args.model == "factorvae":
-    assert args.dataset.endswith("pairs")
+    args.dataset += "_pairs"
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using device: ", device)
